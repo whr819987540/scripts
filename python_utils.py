@@ -9,6 +9,7 @@ def init_logging():
     # lineno: 调用日志输出函数的语句所在的代码行(所在文件内的行号)
     # levelname: 日志的最终等级(以字符串的形式显示)
     # message: 用户输出的消息(传入logger的参数)
+    # reference: https://zhuanlan.zhihu.com/p/166671955
 
     # note: 如果是多进程，对logging模块的初始化需要在每个进程中都运行一次
     # 并且，logging模块是线程安全的，但并不是进程安全的
