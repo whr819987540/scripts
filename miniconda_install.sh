@@ -7,3 +7,4 @@ conda update -n base -c defaults conda
 conda config --show
 conda config --set proxy_servers.http $http_proxy
 conda config --set proxy_servers.https $http_proxy
+pip config set global.proxy $http_proxy
