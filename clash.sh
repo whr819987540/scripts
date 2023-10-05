@@ -25,7 +25,7 @@ Description=clash for windows
 [Service]
 Type=simple
 ExecStart=$HOME/clash/clash-linux-amd64-v1.10.0 -f $HOME/clash/glados.yaml -d $HOME/clash
-ExecReload=/home/whr-pc-ubuntu/下载/clash/clash-linux-amd64-v1.10.0 -f $HOME/clash/glados.yaml -d $HOME/clash
+ExecReload=$HOME/clash/clash-linux-amd64-v1.10.0 -f $HOME/clash/glados.yaml -d $HOME/clash
 RemainAfterExit=yes
 Restart=always
 RestartSec=60
