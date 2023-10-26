@@ -5,6 +5,7 @@ sudo apt install -y git
 git config --global user.email "819987540@qq.com"
 git config --global user.name "whr81998754"
 git config --global http.proxy $http_proxy
+git config --global core.editor "/usr/bin/vim"
 
 # github ssh login
 ssh-keygen
