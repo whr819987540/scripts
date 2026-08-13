@@ -12,8 +12,11 @@ Modes:
   serve      Install and start the Clash systemd service
 
 Environment:
-  config_url          Required URL of the Clash configuration file
-  clash_download_url  Clash archive URL; defaults to this repository. Official: https://glados.rocks/tools/clash-linux.zip
+  config_url            Required URL of the Clash configuration file
+  clash_download_url    Clash archive URL; defaults to this repository. 
+                        Official: https://glados.rocks/tools/clash-linux.zip
+                        Github: https://raw.githubusercontent.com/whr819987540/scripts/main/clash-linux.zip
+                        Gitee: https://gitee.com/hit_whr/scripts/blob/main/clash-linux.zip
 EOF
 }
 
