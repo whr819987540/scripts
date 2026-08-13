@@ -12,7 +12,7 @@ Commands:
   docker        Install Docker
   git           Install and configure Git
   miniconda     Install Miniconda
-  zsh           Install Zsh and Oh My Zsh
+  zsh           Install and configure Zsh, Oh My Zsh, and plugins
   new-user      Create and configure a user
   zabbix-agent  Install and configure Zabbix Agent
   clash         Install and configure Clash
