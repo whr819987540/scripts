@@ -15,8 +15,8 @@ Commands:
   zsh           Install and configure Zsh, Oh My Zsh, and plugins
   new-user      Create and configure a user
   zabbix-agent  Install and configure Zabbix Agent
-  clash [serve] Install and run Clash; use serve to start a systemd service
-  gpu-docker-processes
+  clash [serve] Install and run Clash; automatically adjust occupied ports
+                gpu-docker-processes
                 Show Docker containers for processes using NVIDIA GPUs
   help          Show this help
 
