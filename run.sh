@@ -22,7 +22,8 @@ Commands:
 
 Environment:
   config_url    Required by clash; URL of the Clash configuration file
-  clash_download_url  Clash archive URL; defaults to this repository
+  clash_download_url  
+                Clash archive URL; defaults to this repository
   SCRIPTS_BASE_URL
                 Base URL used to download scripts (defaults to Gitee)
 EOF
