@@ -15,30 +15,41 @@ run_as_root() {
     elif command -v sudo >/dev/null 2>&1; then
         sudo "$@"
     else
-        printf 'This operation requires root privileges, but sudo is not installed.\n' >&2
+        printf 'Cannot install missing dependencies without root privileges or sudo access.\n' >&2
         exit 1
     fi
 }
 
 install_packages() {
+    local missing_packages=()
+
+    command -v zsh >/dev/null 2>&1 || missing_packages+=(zsh)
+    command -v git >/dev/null 2>&1 || missing_packages+=(git)
+
+    if (( ${#missing_packages[@]} == 0 )); then
+        log "Zsh and Git are already installed; skipping package installation"
+        return
+    fi
+
     if command -v apt-get >/dev/null 2>&1; then
-        log "Installing Zsh and Git with apt"
+        log "Installing missing dependencies with apt: ${missing_packages[*]}"
         run_as_root apt-get update
-        run_as_root apt-get install -y zsh git
+        run_as_root apt-get install -y "${missing_packages[@]}"
     elif command -v dnf >/dev/null 2>&1; then
-        log "Installing Zsh and Git with dnf"
-        run_as_root dnf install -y zsh git
+        log "Installing missing dependencies with dnf: ${missing_packages[*]}"
+        run_as_root dnf install -y "${missing_packages[@]}"
     elif command -v yum >/dev/null 2>&1; then
-        log "Installing Zsh and Git with yum"
-        run_as_root yum install -y zsh git
+        log "Installing missing dependencies with yum: ${missing_packages[*]}"
+        run_as_root yum install -y "${missing_packages[@]}"
     elif command -v pacman >/dev/null 2>&1; then
-        log "Installing Zsh and Git with pacman"
-        run_as_root pacman -Sy --needed --noconfirm zsh git
+        log "Installing missing dependencies with pacman: ${missing_packages[*]}"
+        run_as_root pacman -Sy --needed --noconfirm "${missing_packages[@]}"
     elif command -v brew >/dev/null 2>&1; then
-        log "Installing Zsh and Git with Homebrew"
-        brew install zsh git
-    elif ! command -v zsh >/dev/null 2>&1 || ! command -v git >/dev/null 2>&1; then
-        printf 'No supported package manager found. Install zsh and git first.\n' >&2
+        log "Installing missing dependencies with Homebrew: ${missing_packages[*]}"
+        brew install "${missing_packages[@]}"
+    else
+        printf 'No supported package manager found. Install these commands first: %s\n' \
+            "${missing_packages[*]}" >&2
         exit 1
     fi
 }
