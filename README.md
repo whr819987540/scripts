@@ -22,6 +22,12 @@ source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/
 source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/run.sh) docker
 ```
 
+查看 NVIDIA GPU 进程所属的 Docker 容器：
+
+```bash
+source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/run.sh) gpu-docker-processes
+```
+
 查看所有可用命令：
 
 ```bash

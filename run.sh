@@ -16,6 +16,8 @@ Commands:
   new-user      Create and configure a user
   zabbix-agent  Install and configure Zabbix Agent
   clash         Install and configure Clash
+  gpu-docker-processes
+                Show Docker containers for processes using NVIDIA GPUs
   help          Show this help
 EOF
 }
@@ -55,6 +57,7 @@ _scripts_run() {
         new-user)     script_name="new_user.sh" ;;
         zabbix-agent) script_name="zabbix_agent.sh" ;;
         clash)        script_name="clash.sh" ;;
+        gpu-docker-processes) script_name="gpu_docker_processes.sh" ;;
         help|-h|--help)
             _scripts_usage
             return 0
