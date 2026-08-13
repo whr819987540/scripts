@@ -28,12 +28,20 @@ _scripts_download() {
     command curl -fsSL "${base_url}/${script_name}" -o "$destination"
 }
 
+_scripts_is_sourced() {
+    if [[ -n "${ZSH_VERSION:-}" ]]; then
+        [[ "${ZSH_EVAL_CONTEXT:-}" == *:file || "${ZSH_EVAL_CONTEXT:-}" == *:file:* ]]
+    else
+        [[ "${BASH_SOURCE[0]}" != "$0" ]]
+    fi
+}
+
 _scripts_run() {
     local command_name="${1:-help}"
     local script_name=""
     local execution_mode="bash"
     local temp_file=""
-    local status=0
+    local exit_code=0
 
     case "$command_name" in
         unset-proxy)
@@ -60,7 +68,7 @@ _scripts_run() {
 
     shift
 
-    if [[ "$execution_mode" == "source" && "${BASH_SOURCE[0]}" == "$0" ]]; then
+    if [[ "$execution_mode" == "source" ]] && ! _scripts_is_sourced; then
         printf '%s\n' "The unset-proxy command must be run with 'source' so it can modify the current shell." >&2
         return 2
     fi
@@ -75,17 +83,17 @@ _scripts_run() {
     if [[ "$execution_mode" == "source" ]]; then
         # shellcheck disable=SC1090
         source "$temp_file" "$@"
-        status=$?
+        exit_code=$?
     else
         bash "$temp_file" "$@"
-        status=$?
+        exit_code=$?
     fi
 
     rm -f "$temp_file"
-    return "$status"
+    return "$exit_code"
 }
 
 _scripts_run "$@"
 _scripts_status=$?
-unset -f _scripts_run _scripts_download _scripts_usage
+unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage
 return "$_scripts_status" 2>/dev/null || exit "$_scripts_status"
