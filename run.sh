@@ -5,7 +5,7 @@
 _scripts_usage() {
     cat <<'EOF'
 Usage:
-  source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/run.sh) <command> [args...]
+  source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) <command> [args...]
 
 Commands:
   unset-proxy   Unset proxy variables in the current shell
@@ -22,13 +22,15 @@ Commands:
 
 Environment:
   config_url    Required by clash; URL of the Clash configuration file
+  SCRIPTS_BASE_URL
+                Base URL used to download scripts (defaults to Gitee)
 EOF
 }
 
 _scripts_download() {
     local script_name="$1"
     local destination="$2"
-    local base_url="https://raw.githubusercontent.com/whr819987540/scripts/main"
+    local base_url="${SCRIPTS_BASE_URL:-https://gitee.com/hit_whr/scripts/raw/main}"
 
     command curl -fsSL "${base_url}/${script_name}" -o "$destination"
 }
