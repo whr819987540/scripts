@@ -21,7 +21,8 @@ Commands:
   help          Show this help
 
 Environment:
-  config_url    Required by clash; URL of the Clash configuration file
+  config_url          Required by clash; URL of the Clash configuration file
+  clash_download_url  Clash archive URL; defaults to this repository
 EOF
 }
 

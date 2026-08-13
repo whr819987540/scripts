@@ -5,14 +5,15 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  config_url=<url> clash.sh [serve]
+  config_url=<url> [clash_download_url=<url>] clash.sh [serve]
 
 Modes:
   (default)  Run Clash in the foreground
   serve      Install and start the Clash systemd service
 
 Environment:
-  config_url  Required URL of the Clash configuration file
+  config_url          Required URL of the Clash configuration file
+  clash_download_url  Clash archive URL; defaults to this repository. Official: https://glados.rocks/tools/clash-linux.zip
 EOF
 }
 
@@ -47,15 +48,24 @@ done
 
 install_dir="${HOME}/clash"
 config_path="${install_dir}/glados.yaml"
-archive_path="$(mktemp "${TMPDIR:-/tmp}/clash-linux.XXXXXX.zip")"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+archive_path="${script_dir}/clash-linux.zip"
+clash_download_url="${clash_download_url:-https://raw.githubusercontent.com/whr819987540/scripts/main/clash-linux.zip}"
+temporary_archive=""
 
 cleanup() {
-    rm -f "$archive_path"
+    if [[ -n "$temporary_archive" ]]; then
+        rm -f "$temporary_archive"
+    fi
 }
 trap cleanup EXIT
 
 mkdir -p "$install_dir"
-curl -fsSL 'https://glados.rocks/tools/clash-linux.zip' -o "$archive_path"
+if [[ ! -f "$archive_path" ]]; then
+    temporary_archive="$(mktemp "${TMPDIR:-/tmp}/clash-linux.XXXXXX.zip")"
+    archive_path="$temporary_archive"
+    curl -fsSL "$clash_download_url" -o "$archive_path"
+fi
 unzip -oq "$archive_path" -d "$install_dir"
 curl -fsSL "$config_url" -o "$config_path"
 chmod 600 "$config_path"
