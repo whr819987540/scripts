@@ -11,7 +11,8 @@ Commands:
   unset-proxy   Unset proxy variables in the current shell
   docker        Install Docker
   git           Install and configure Git
-  miniconda     Install Miniconda
+  miniconda [silent] [installer-path]
+                Install Miniconda without prompts; reuse an existing installer
   zsh           Install and configure Zsh, Oh My Zsh, and plugins
   new-user      Create and configure a user
   zabbix-agent  Install and configure Zabbix Agent
