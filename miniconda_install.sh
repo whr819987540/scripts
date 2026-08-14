@@ -106,6 +106,8 @@ fi
 
 # Batch mode accepts the installer license and supplies all installation choices.
 bash "$installer_path" -b -u -p "$install_dir"
+"$install_dir/bin/conda" config --set auto_activate_base false
 
 printf '\nMiniconda is installed at %s.\n' "$install_dir"
+printf '%s\n' 'Automatic activation of the base environment is disabled.'
 printf 'Run the following command to activate it:\n  source %s/bin/activate\n' "$install_dir"

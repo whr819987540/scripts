@@ -3,7 +3,8 @@
 `miniconda_install.sh` 会根据当前操作系统和 CPU 架构选择最新版 Miniconda
 安装器，并以批处理模式安装到 `~/miniconda3`。批处理模式会接受安装器协议并使用
 预设选项，整个安装过程不需要用户输入。安装器默认保存在
-`~/.cache/miniconda/`；该文件已存在且非空时会直接复用，不重复下载。
+`~/.cache/miniconda/`；该文件已存在且非空时会直接复用，不重复下载。安装完成后，
+脚本会关闭 `base` 环境的自动激活。
 
 支持的平台：
 
@@ -63,6 +64,12 @@
 
    ```bash
    bash "${installer_path}" -b -u -p "${HOME}/miniconda3"
+   ```
+
+6. 关闭 `base` 环境的自动激活，避免打开新终端时自动进入该环境。
+
+   ```bash
+   "${HOME}/miniconda3/bin/conda" config --set auto_activate_base false
    ```
 
 脚本会自动完成以上判断和操作：
