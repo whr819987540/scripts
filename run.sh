@@ -15,6 +15,7 @@ Commands:
   git           Install and configure Git
   miniconda [silent] [installer-path]
                 Install Miniconda without prompts; reuse an existing installer
+  nvm           Install the latest stable nvm and Node.js releases
   zsh           Install and configure Zsh, Oh My Zsh, and plugins
   new-user      Create and configure a user
   zabbix-agent  Install and configure Zabbix Agent
@@ -71,6 +72,7 @@ _scripts_run() {
         docker)       script_name="docker_install.sh" ;;
         git)          script_name="git_install_config.sh" ;;
         miniconda)    script_name="miniconda_install.sh" ;;
+        nvm)          script_name="nvm_install.sh" ;;
         zsh)          script_name="zsh_install.sh" ;;
         new-user)     script_name="new_user.sh" ;;
         zabbix-agent) script_name="zabbix_agent.sh" ;;

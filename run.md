@@ -16,6 +16,12 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) miniconda
    ```
 
+   安装最新 stable 版 nvm 和 Node.js，并将 Node.js 的 `stable` 设为默认版本：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) nvm
+   ```
+
    持续测量 `eth0` 的区间平均和累计平均网络速度：
 
    ```bash
