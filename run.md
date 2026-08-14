@@ -16,6 +16,15 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) miniconda
    ```
 
+   持续测量 `eth0` 的区间平均和累计平均网络速度：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+       network-speed eth0 1
+   ```
+
+   `network-speed` 的两个可选参数依次为网卡名称和采样秒数，按 `Ctrl+C` 停止。
+
    需要修改当前终端环境的 `set-proxy` 和 `unset-proxy` 命令也必须使用 `source`。例如，使用默认地址设置代理：
 
    ```bash

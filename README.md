@@ -59,6 +59,12 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) docker
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) gpu-docker-processes
 ```
 
+持续查看网卡的区间平均和累计平均速度：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) network-speed eth0 1
+```
+
 查看所有可用命令：
 
 ```bash
