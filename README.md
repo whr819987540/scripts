@@ -17,6 +17,14 @@ export SCRIPTS_BASE_URL=https://raw.githubusercontent.com/whr819987540/scripts/m
 source <(curl -fsSL "$SCRIPTS_BASE_URL/run.sh") docker
 ```
 
+安装clash:
+
+```bash
+export clash_download_url="https://gitee.com/hit_whr/scripts/raw/main/clash-linux.zip"
+export config_url="xxx"
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash
+```
+
 例如，取消当前终端中的代理环境变量：
 
 ```bash
