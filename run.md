@@ -16,6 +16,22 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) miniconda
    ```
 
+   需要修改当前终端环境的 `set-proxy` 和 `unset-proxy` 命令也必须使用 `source`。例如，使用默认地址设置代理：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) set-proxy
+   ```
+
+   也可以通过参数或 `proxy` 环境变量指定地址：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+       set-proxy 192.168.1.10:7890
+
+   proxy=socks5://127.0.0.1:1080 \
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) set-proxy
+   ```
+
 3. 原有的 `silent` 参数仍可使用，行为与不传参数相同：
 
    ```bash

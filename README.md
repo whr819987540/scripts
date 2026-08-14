@@ -31,6 +31,22 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) unset-proxy
 ```
 
+使用默认地址 `127.0.0.1:7890` 设置当前终端的代理环境变量：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) set-proxy
+```
+
+也可以通过参数或 `proxy` 环境变量指定代理：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+    set-proxy 192.168.1.10:7890
+
+proxy=socks5://127.0.0.1:1080 \
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) set-proxy
+```
+
 安装 Docker：
 
 ```bash

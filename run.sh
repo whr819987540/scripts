@@ -8,6 +8,8 @@ Usage:
   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) <command> [args...]
 
 Commands:
+  set-proxy [proxy]
+                Set proxy variables in the current shell (default: 127.0.0.1:7890)
   unset-proxy   Unset proxy variables in the current shell
   docker        Install Docker
   git           Install and configure Git
@@ -22,6 +24,7 @@ Commands:
   help          Show this help
 
 Environment:
+  proxy         Proxy URL or host:port used by set-proxy
   config_url    Required by clash; URL of the Clash configuration file
   clash_download_url  
                 Clash archive URL; defaults to this repository
@@ -54,6 +57,10 @@ _scripts_run() {
     local exit_code=0
 
     case "$command_name" in
+        set-proxy)
+            script_name="set_proxy.sh"
+            execution_mode="source"
+            ;;
         unset-proxy)
             script_name="unset_proxy.sh"
             execution_mode="source"
@@ -80,7 +87,7 @@ _scripts_run() {
     shift
 
     if [[ "$execution_mode" == "source" ]] && ! _scripts_is_sourced; then
-        printf '%s\n' "The unset-proxy command must be run with 'source' so it can modify the current shell." >&2
+        printf '%s\n' "The $command_name command must be run with 'source' so it can modify the current shell." >&2
         return 2
     fi
 
