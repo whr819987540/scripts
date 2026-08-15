@@ -59,6 +59,13 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) docker
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) gpu-docker-processes
 ```
 
+构建并运行 GPU 互联带宽、延迟和 NCCL AllReduce 测试：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+    gpu-interconnect-benchmark /data/gpu-benchmark 0,1,2,3
+```
+
 持续查看网卡的区间平均和累计平均速度：
 
 ```bash

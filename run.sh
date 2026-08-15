@@ -20,8 +20,10 @@ Commands:
   new-user      Create and configure a user
   zabbix-agent  Install and configure Zabbix Agent
   clash [serve] Install and run Clash; automatically adjust occupied ports
-                gpu-docker-processes
+  gpu-docker-processes
                 Show Docker containers for processes using NVIDIA GPUs
+  gpu-interconnect-benchmark [work-dir] [gpu-devices]
+                Build and run nvbandwidth, CUDA P2P, and NCCL benchmarks
   network-speed [interface] [interval]
                 Monitor interval and cumulative average network speed
                 (defaults: eth0, 1 second)
@@ -78,6 +80,7 @@ _scripts_run() {
         zabbix-agent) script_name="zabbix_agent.sh" ;;
         clash)        script_name="clash.sh" ;;
         gpu-docker-processes) script_name="gpu_docker_processes.sh" ;;
+        gpu-interconnect-benchmark) script_name="gpu_interconnect_benchmark.sh" ;;
         network-speed) script_name="network_speed.sh" ;;
         help|-h|--help)
             _scripts_usage
