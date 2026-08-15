@@ -1,6 +1,6 @@
 # 添加 SSH 授权公钥步骤
 
-`add_authorized_key.sh` 将内置的 SSH 公钥添加到当前用户的 `~/.ssh/authorized_keys`。重复执行不会重复添加公钥，也不会覆盖文件中的其他授权项。
+`add_authorized_key.sh` 将 SSH 公钥添加到当前用户的 `~/.ssh/authorized_keys`。可以传入一条完整公钥；省略参数时使用脚本内置公钥。脚本会校验公钥格式，重复执行不会重复添加，也不会覆盖文件中的其他授权项。
 
 不要使用 `sudo` 执行整个脚本，否则公钥可能会被添加到 root 用户的主目录。需要信任公钥的用户应直接执行以下步骤。
 
@@ -18,7 +18,7 @@
    chmod 600 ~/.ssh/authorized_keys
    ```
 
-3. 检查完整公钥是否已经存在；仅在不存在时追加。下面的命令也会处理原文件末尾缺少换行符的情况。
+3. 检查完整公钥是否已经存在；仅在不存在时追加。下面以脚本内置公钥为例，也会处理原文件末尾缺少换行符的情况。
 
    ```bash
    grep -Fqx -- 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz5k2gaUzhBZwKCTKfKzYVrzLLoKu2+7Bdcm5uLDZeOUfw2fD3zBsf/M8iHkax1u3Umr9qZgiskgU3vpSEg1Wh1zdiYjTZysEAVNk+9007m6zoEtv/eXnGXukIJLae3CBTNwpjy42ceTYorhVq2PkLkx2R4qfLWiKRSMrFd8utbVDzLa6Uyh75B0UjrSA9MeN3QCei+YuG+UnP2Vuf1g4caoDZjvLKgCE97HxrPxQAxLxvJxmUA+dvknyfQZMj4EUi3bc1UlD8zq78waGVssgt2+BJ6TKFaPGeqZG/9MBMMr4bAJhGyeQYCun34fFc+6kjyhW4+a03NpGKthLaiRV0rbZ3cm/+vYrFYV/4eUjztyHFp9j1kmRRTAOC/GfCsRUmWWA8bHaNITH3I8lfZcxRxG4vOzwnZubtA/epsCzB1rIuxynfRKkSGLQRd6KtmJeyhkxxuzT/eMSjOQpghRex7VMeSJzBgzOVz79ZLQynTX2fsR8IKCLzhTv430vNWN8= 819987540@qq.com' ~/.ssh/authorized_keys || {
@@ -40,4 +40,18 @@
 
 ```bash
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) add-authorized-key
+```
+
+传入其他公钥时，必须用引号包住包含类型、Base64 内容和可选注释的完整公钥：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+    add-authorized-key 'ssh-ed25519 <Base64公钥内容> user@example.com'
+```
+
+查看参数帮助：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+    add-authorized-key --help
 ```

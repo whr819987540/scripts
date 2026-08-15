@@ -23,7 +23,14 @@
        add-authorized-key
    ```
 
-   该命令会创建 `~/.ssh/authorized_keys`、修正权限并避免重复添加。不要用 `sudo` 执行，否则目标用户可能变成 root。
+   该命令会创建 `~/.ssh/authorized_keys`、修正权限并避免重复添加。省略参数时使用内置公钥，也可以传入一条用引号包住的完整公钥：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+       add-authorized-key 'ssh-ed25519 <Base64公钥内容> user@example.com'
+   ```
+
+   不要用 `sudo` 执行，否则目标用户可能变成 root。
 
    安装最新 stable 版 nvm 和 Node.js，并将 Node.js 的 `stable` 设为默认版本：
 

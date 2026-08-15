@@ -18,8 +18,9 @@ Commands:
   nvm           Install the latest stable nvm and Node.js releases
   zsh           Install and configure Zsh, Oh My Zsh, and plugins
   new-user      Create and configure a user
-  add-authorized-key
-                Trust the built-in SSH public key for the current user
+  add-authorized-key [public-key]
+                Trust a quoted SSH public key for the current user
+                (defaults to the key built into the script)
   zabbix-agent  Install and configure Zabbix Agent
   clash [serve] Install and run Clash; automatically adjust occupied ports
   gpu-docker-processes
