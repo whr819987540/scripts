@@ -16,6 +16,15 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) miniconda
    ```
 
+   将仓库内置的 SSH 公钥添加到当前用户的授权文件：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+       add-authorized-key
+   ```
+
+   该命令会创建 `~/.ssh/authorized_keys`、修正权限并避免重复添加。不要用 `sudo` 执行，否则目标用户可能变成 root。
+
    安装最新 stable 版 nvm 和 Node.js，并将 Node.js 的 `stable` 设为默认版本：
 
    ```bash
