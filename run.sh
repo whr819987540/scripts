@@ -18,10 +18,14 @@ Commands:
   nvm           Install the latest stable nvm and Node.js releases
   zsh           Install and configure Zsh, Oh My Zsh, and plugins
   new-user      Create and configure a user
+  add-authorized-key
+                Trust the built-in SSH public key for the current user
   zabbix-agent  Install and configure Zabbix Agent
   clash [serve] Install and run Clash; automatically adjust occupied ports
-                gpu-docker-processes
+  gpu-docker-processes
                 Show Docker containers for processes using NVIDIA GPUs
+  gpu-interconnect-benchmark [work-dir] [gpu-devices]
+                Build and run nvbandwidth, CUDA P2P, and NCCL benchmarks
   network-speed [interface] [interval]
                 Monitor interval and cumulative average network speed
                 (defaults: eth0, 1 second)
@@ -77,9 +81,11 @@ _scripts_run() {
         nvm)          script_name="nvm_install.sh" ;;
         zsh)          script_name="zsh_install.sh" ;;
         new-user)     script_name="new_user.sh" ;;
+        add-authorized-key) script_name="add_authorized_key.sh" ;;
         zabbix-agent) script_name="zabbix_agent.sh" ;;
         clash)        script_name="clash.sh" ;;
         gpu-docker-processes) script_name="gpu_docker_processes.sh" ;;
+        gpu-interconnect-benchmark) script_name="gpu_interconnect_benchmark.sh" ;;
         network-speed) script_name="network_speed.sh" ;;
         container-mem) script_name="container_mem.sh" ;;
         help|-h|--help)

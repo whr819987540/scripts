@@ -16,6 +16,15 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) miniconda
    ```
 
+   将仓库内置的 SSH 公钥添加到当前用户的授权文件：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+       add-authorized-key
+   ```
+
+   该命令会创建 `~/.ssh/authorized_keys`、修正权限并避免重复添加。不要用 `sudo` 执行，否则目标用户可能变成 root。
+
    安装最新 stable 版 nvm 和 Node.js，并将 Node.js 的 `stable` 设为默认版本：
 
    ```bash
@@ -30,6 +39,15 @@
    ```
 
    `network-speed` 的两个可选参数依次为网卡名称和采样秒数，按 `Ctrl+C` 停止。
+
+   构建并运行 GPU 拓扑、NVLink、点对点带宽和 NCCL AllReduce 测试：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
+       gpu-interconnect-benchmark /data/gpu-benchmark 0,1,2,3
+   ```
+
+   两个可选参数依次为工作目录和逗号分隔的物理 GPU 编号；均省略时使用 `~/gpu-interconnect-benchmark` 和检测到的全部 GPU。详细的逐步命令及双向带宽口径见 `gpu_interconnect_benchmark.md`。
 
    需要修改当前终端环境的 `set-proxy` 和 `unset-proxy` 命令也必须使用 `source`。例如，使用默认地址设置代理：
 
