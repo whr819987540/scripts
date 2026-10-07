@@ -28,6 +28,12 @@ source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/
 source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/run.sh) gpu-docker-processes
 ```
 
+分析当前容器的内存占用（`-n N` 指定进程列表显示前 N 项，默认 15）：
+
+```bash
+source <(curl -fsSL https://raw.githubusercontent.com/whr819987540/scripts/main/run.sh) container-mem
+```
+
 查看所有可用命令：
 
 ```bash

@@ -18,6 +18,7 @@ Commands:
   clash         Install and configure Clash
   gpu-docker-processes
                 Show Docker containers for processes using NVIDIA GPUs
+  container-mem Analyze memory usage of the current container (-n N: show top N)
   help          Show this help
 EOF
 }
@@ -58,6 +59,7 @@ _scripts_run() {
         zabbix-agent) script_name="zabbix_agent.sh" ;;
         clash)        script_name="clash.sh" ;;
         gpu-docker-processes) script_name="gpu_docker_processes.sh" ;;
+        container-mem) script_name="container_mem.sh" ;;
         help|-h|--help)
             _scripts_usage
             return 0
