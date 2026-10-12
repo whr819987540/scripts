@@ -39,6 +39,7 @@
   "idleCompaction": false,
   "switchModelsOnFlag": false,
   "skipWebFetchPreflight": true,
+  "skipWorkflowUsageWarning": true,
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline.sh",
