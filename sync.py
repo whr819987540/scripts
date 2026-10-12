@@ -8,6 +8,7 @@
 比对规则：
   - 按完整路径比对（如 env.ANTHROPIC_MODEL）：本机缺的算「新增」，值不同算「修改」
   - 数组只补本机缺少的元素；本机独有的 key 和数组元素不删除，除非远端在 $remove 里列出
+  - 严格比对（运行时询问是否开启）：本机有、共享配置没有的 key 和数组元素都列为删除，此时 $remove 不生效
   - 每一处新增、修改、删除都先列出来，经你确认后才写入，写入前自动备份；删除总是逐项确认
   - 选了「忽略」的项记在 <配置目录>/.claude-sync-state.json，远端值不变就不再询问
 
@@ -294,6 +295,25 @@ def diff_settings(local, remote, path, out):
             out.append(Change("modify", p, rv, lv))
 
 
+def diff_extra(local, remote, path, out):
+    """严格比对：本机有、共享配置没有的 key 和数组元素列为删除；两边都是对象时往下比。"""
+    for key, lv in local.items():
+        p = path + [key]
+        if key not in remote:
+            out.append(Change("remove", p, None, lv))
+            continue
+        rv = remote[key]
+        if isinstance(lv, dict) and isinstance(rv, dict):
+            diff_extra(lv, rv, p, out)
+        elif isinstance(lv, list) and isinstance(rv, list):
+            have = {canon(x) for x in rv}
+            for item in lv:
+                c = canon(item)
+                if c not in have:
+                    have.add(c)  # 本机有重复元素时只问一次，删除会一并去掉
+                    out.append(Change("remove_item", p, item))
+
+
 def lookup(obj, path):
     for key in path:
         if not isinstance(obj, dict) or key not in obj:
@@ -426,10 +446,15 @@ def main():
     print("本机：%s" % settings_path)
 
     removals = parse_removals(remote.pop(REMOVE_KEY, []))
+    strict = ask("\n开启严格比对？本机有、共享配置没有的 key 和数组元素会逐项询问是否删除，%s 不生效 [y/n] > "
+                 % REMOVE_KEY, ["y", "n"]) == "y"
     changes = []
     diff_settings(local, remote, [], changes)
     changes += diff_files(base, timeout, cfg)
-    diff_removals(local, remote, removals, changes)
+    if strict:
+        diff_extra(local, remote, [], changes)
+    else:
+        diff_removals(local, remote, removals, changes)
 
     state = load_state(state_path)
     ignored = state["ignored"]

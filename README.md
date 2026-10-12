@@ -35,6 +35,8 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 来源：GitHub  https://raw.githubusercontent.com/whr819987540/claude-sync-settings/main/
 本机：C:\Users\me\.claude\settings.json
 
+开启严格比对？本机有、共享配置没有的 key 和数组元素会逐项询问是否删除，$remove 不生效 [y/n] > n
+
 发现 4 处差异：
    1. [新增] permissions.deny 追加 "Read(//**/*.pem)"
    2. [修改] effortLevel："high" → "xhigh"
@@ -59,6 +61,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 - **每一处新增、修改、删除都要你确认**才会写入。
 - **数组**（比如 `permissions.deny`）：只补本机缺少的元素。
 - **默认不删除**：本机独有的 key 和数组元素都保留。只有远端在 `$remove` 里列出的才会提示「删除」，而且删除项总是逐项确认，选 `[a]` 也不会替你删。
+- **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问。
 - **写入前自动备份**，备份名为 `settings.json.bak-sync-<时间>`，状态栏脚本同理。
 - **忽略记录**存在 `~/.claude/.claude-sync-state.json`。远端的值变了会重新询问；想马上重新询问，加 `--all`。
 
