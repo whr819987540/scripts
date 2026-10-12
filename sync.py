@@ -7,8 +7,8 @@
 
 比对规则：
   - 按完整路径比对（如 env.ANTHROPIC_MODEL）：本机缺的算「新增」，值不同算「修改」
-  - 数组只补本机缺少的元素；本机独有的 key 和数组元素从不删除
-  - 每一处新增、修改都先列出来，经你确认后才写入，写入前自动备份
+  - 数组只补本机缺少的元素；本机独有的 key 和数组元素不删除，除非远端在 $remove 里列出
+  - 每一处新增、修改、删除都先列出来，经你确认后才写入，写入前自动备份；删除总是逐项确认
   - 选了「忽略」的项记在 <配置目录>/.claude-sync-state.json，远端值不变就不再询问
 
 只用标准库，Python 3.8+，Windows / macOS / Linux 通用。
@@ -43,7 +43,9 @@ SHARED_SETTINGS = "shared-settings.json"
 # 远端文件名 -> 本机文件名（都相对于配置目录）
 SHARED_FILES = [("statusline.sh", "statusline.sh")]
 STATE_FILE = ".claude-sync-state.json"
+REMOVE_KEY = "$remove"  # 远端专用：列出要从本机删除的 key / 数组元素，不写进本机
 SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
+MISSING = object()
 
 
 # ---------------------------------------------------------------- 基础工具
@@ -93,7 +95,8 @@ def why(exc):
 
 
 def atomic_write(path, text, mode=None):
-    """先写临时文件再替换，避免写到一半留下坏文件。"""
+    """先写临时文件再替换，避免写到一半留下坏文件。符号链接写到它指向的文件，链接本身保留。"""
+    path = Path(os.path.realpath(str(path)))
     path.parent.mkdir(parents=True, exist_ok=True)
     if mode is None and path.exists():
         mode = stat.S_IMODE(path.stat().st_mode)
@@ -199,7 +202,10 @@ def load_state(path):
 # ---------------------------------------------------------------- 比对
 
 class Change:
-    """一处待同步的差异。kind: add / modify / append / file。"""
+    """一处待同步的差异。kind: add / modify / append / file / remove / remove_item。
+
+    remove 删除整个 key，local 是本机值；remove_item 删除数组里的一个元素，remote 是这个元素。
+    """
 
     def __init__(self, kind, path, remote, local=None):
         self.kind = kind
@@ -211,7 +217,12 @@ class Change:
             self.hash = digest(remote)
         else:
             self.hash = digest(canon(remote))
-            self.key = "settings:" + canon(path) + ("#" + self.hash if kind == "append" else "")
+            self.key = (("remove:" if self.removes else "settings:") + canon(path)
+                        + ("#" + self.hash if kind in ("append", "remove_item") else ""))
+
+    @property
+    def removes(self):
+        return self.kind in ("remove", "remove_item")
 
     def summary(self):
         if self.kind == "file":
@@ -226,6 +237,10 @@ class Change:
             return "[新增] %s = %s" % (p, short(self.remote))
         if self.kind == "append":
             return "[新增] %s 追加 %s" % (p, short(self.remote))
+        if self.kind == "remove":
+            return "[删除] %s（本机值：%s）" % (p, short(self.local))
+        if self.kind == "remove_item":
+            return "[删除] %s 移除 %s" % (p, short(self.remote))
         return "[修改] %s：%s → %s" % (p, short(self.local), short(self.remote))
 
     def detail(self):
@@ -234,7 +249,7 @@ class Change:
             if self.local is None:
                 print("    远端文件 %d 行，将写入本机" % len(self.remote.splitlines()))
             return
-        full = json.dumps(self.remote, ensure_ascii=False, indent=2)
+        full = json.dumps(self.local if self.kind == "remove" else self.remote, ensure_ascii=False, indent=2)
         if self.kind == "modify":
             local = json.dumps(self.local, ensure_ascii=False, indent=2)
             if len(full) > 90 or len(local) > 90:
@@ -247,11 +262,16 @@ class Change:
         node = settings
         for key in self.path[:-1]:
             node = node[key]
+        last = self.path[-1]
         value = copy.deepcopy(self.remote)
         if self.kind == "append":
-            node[self.path[-1]].append(value)
+            node[last].append(value)
+        elif self.kind == "remove":
+            del node[last]
+        elif self.kind == "remove_item":
+            node[last] = [x for x in node[last] if canon(x) != canon(value)]
         else:
-            node[self.path[-1]] = value
+            node[last] = value
 
 
 def diff_settings(local, remote, path, out):
@@ -274,6 +294,48 @@ def diff_settings(local, remote, path, out):
             out.append(Change("modify", p, rv, lv))
 
 
+def lookup(obj, path):
+    for key in path:
+        if not isinstance(obj, dict) or key not in obj:
+            return MISSING
+        obj = obj[key]
+    return obj
+
+
+def parse_removals(spec):
+    """把远端的 $remove 规范成 [(路径, 数组元素)]；数组元素为 MISSING 表示删整个 key。
+
+    每条可以是点分路径 "env.ANTHROPIC_MODEL"，或 {"path": "permissions.deny", "item": "Read(...)"}
+    删数组里的一个元素；key 本身含点时 path 写成数组，如 {"path": ["a.b", "c"]}。
+    """
+    out = []
+    for entry in spec if isinstance(spec, list) else [spec]:
+        path, item = entry, MISSING
+        if isinstance(entry, dict):
+            path, item = entry.get("path"), entry.get("item", MISSING)
+        if isinstance(path, str):
+            path = path.split(".")
+        if not (isinstance(path, list) and path and all(isinstance(k, str) and k for k in path)):
+            print("跳过无法识别的 %s 条目：%s" % (REMOVE_KEY, short(entry)))
+            continue
+        out.append((path, item))
+    return out
+
+
+def diff_removals(local, remote, removals, out):
+    for path, item in removals:
+        lv, rv = lookup(local, path), lookup(remote, path)
+        if item is MISSING:
+            if rv is not MISSING:
+                print("%s 同时出现在共享配置里，跳过对它的删除" % fmt_path(path))
+            elif lv is not MISSING:
+                out.append(Change("remove", path, None, lv))
+        elif isinstance(rv, list) and canon(item) in {canon(x) for x in rv}:
+            print("%s 里的 %s 同时出现在共享配置里，跳过对它的删除" % (fmt_path(path), short(item)))
+        elif isinstance(lv, list) and canon(item) in {canon(x) for x in lv}:
+            out.append(Change("remove_item", path, item))
+
+
 def diff_files(base, timeout, cfg):
     out = []
     for remote_name, local_name in SHARED_FILES:
@@ -294,15 +356,27 @@ def diff_files(base, timeout, cfg):
 
 # ---------------------------------------------------------------- 交互
 
-def review(pending, ignored):
-    """逐项确认。返回要应用的列表；选 q 时返回 None，表示什么都不写。"""
+def review(pending, ignored, apply_rest=False):
+    """逐项确认。apply_rest 为真时非删除项直接应用，删除项总是单独询问。
+
+    返回要应用的列表；选 q 时返回 None，表示什么都不写。
+    """
     accepted, newly_ignored = [], {}
     total = len(pending)
+    rest_note = "（删除项仍逐项确认）" if any(c.removes for c in pending) else ""
     for i, c in enumerate(pending):
+        if apply_rest and not c.removes:
+            accepted.append(c)
+            continue
         print("\n(%d/%d) %s" % (i + 1, total, c.summary()))
         c.detail()
-        opts = ["y", "n", "i", "a", "q"]
-        prompt = "  应用？[y] 是  [n] 本次跳过  [i] 忽略（远端不变就不再问）  [a] 这项及剩余全部应用  [q] 退出不写入"
+        opts = ["y", "n", "i"]
+        prompt = "  应用？[y] 是  [n] 本次跳过  [i] 忽略（远端不变就不再问）"
+        if not c.removes:
+            opts.append("a")
+            prompt += "  [a] 这项及剩余全部应用" + rest_note
+        opts.append("q")
+        prompt += "  [q] 退出不写入"
         if c.kind == "file" and c.local is not None:
             opts.append("d")
             prompt += "  [d] 看 diff"
@@ -312,13 +386,11 @@ def review(pending, ignored):
             ans = ask(prompt + " > ", opts)
         if ans == "q":
             return None
-        if ans == "y":
+        if ans in ("y", "a"):
             accepted.append(c)
+            apply_rest = apply_rest or ans == "a"
         elif ans == "i":
             newly_ignored[c.key] = c.hash
-        elif ans == "a":
-            accepted.extend(pending[i:])
-            break
     ignored.update(newly_ignored)
     return accepted
 
@@ -353,9 +425,11 @@ def main():
     base, timeout, remote = load_remote(args)
     print("本机：%s" % settings_path)
 
+    removals = parse_removals(remote.pop(REMOVE_KEY, []))
     changes = []
     diff_settings(local, remote, [], changes)
     changes += diff_files(base, timeout, cfg)
+    diff_removals(local, remote, removals, changes)
 
     state = load_state(state_path)
     ignored = state["ignored"]
@@ -375,11 +449,12 @@ def main():
         print("\n--dry-run：只列出差异，未写入。")
         return
 
-    choice = ask("\n[a] 全部应用  [e] 逐项确认  [q] 退出 > ", ["a", "e", "q"])
+    all_note = "（删除项仍逐项确认）" if any(c.removes for c in pending) else ""
+    choice = ask("\n[a] 全部应用%s  [e] 逐项确认  [q] 退出 > " % all_note, ["a", "e", "q"])
     if choice == "q":
         print("未做任何改动。")
         return
-    accepted = list(pending) if choice == "a" else review(pending, ignored)
+    accepted = review(pending, ignored, apply_rest=choice == "a")
     if accepted is None:
         print("已退出，未做任何改动。")
         return
@@ -388,7 +463,8 @@ def main():
     setting_changes = [c for c in accepted if c.kind != "file"]
     if setting_changes:
         bak = backup(settings_path, stamp)
-        for c in setting_changes:
+        # 先删再改：远端把上级整体换掉时，删除不会落到新值上
+        for c in sorted(setting_changes, key=lambda c: not c.removes):
             c.apply(local)
         atomic_write(settings_path, json.dumps(local, indent=2, ensure_ascii=False) + "\n")
         print("\n已写入 settings.json：%d 项%s" % (

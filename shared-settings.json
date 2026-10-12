@@ -1,8 +1,7 @@
 {
   "env": {
     "CLAUDE_CODE_RETRY_WATCHDOG": "1",
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-    "ANTHROPIC_MODEL": "claude-opus-5-5[1m]"
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
   },
   "permissions": {
     "deny": [
@@ -24,6 +23,7 @@
       "Read(*secret*)",
       "Read(.history)",
       "Read(~/.claude/.credentials.json)",
+      "Read(//**/.credentials.json)",
       "Read(~/.bash_history)",
       "Read(~/.python_history)",
       "Read(~/AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt)",
@@ -42,11 +42,10 @@
   "skipWorkflowUsageWarning": true,
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/statusline.sh",
+    "command": "bash \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"",
     "padding": 0
   },
   "model": "claude-opus-5-5[1m]",
-  "effortLevel": "xhigh",
   "modelSettings": {
     "claude-fable-5-1": {
       "effortLevel": "xhigh"
@@ -54,5 +53,9 @@
     "claude-opus-5-5": {
       "effortLevel": "xhigh"
     }
-  }
+  },
+  "$remove": [
+    "env.ANTHROPIC_MODEL",
+    "effortLevel"
+  ]
 }
