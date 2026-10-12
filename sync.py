@@ -376,15 +376,19 @@ def diff_files(base, timeout, cfg):
 
 # ---------------------------------------------------------------- 交互
 
-def review(pending, ignored, apply_rest=False):
-    """逐项确认。apply_rest 为真时非删除项直接应用，删除项总是单独询问。
+def review(pending, ignored, apply_rest=False, strict=False):
+    """逐项确认。apply_rest 为真时非删除项直接应用，删除项总是单独询问；
+    strict 为真时删除项多一个 s，跳过剩下的全部删除项。
 
     返回要应用的列表；选 q 时返回 None，表示什么都不写。
     """
     accepted, newly_ignored = [], {}
     total = len(pending)
     rest_note = "（删除项仍逐项确认）" if any(c.removes for c in pending) else ""
+    skip_removals = False
     for i, c in enumerate(pending):
+        if skip_removals and c.removes:
+            continue
         if apply_rest and not c.removes:
             accepted.append(c)
             continue
@@ -395,6 +399,9 @@ def review(pending, ignored, apply_rest=False):
         if not c.removes:
             opts.append("a")
             prompt += "  [a] 这项及剩余全部应用" + rest_note
+        elif strict:
+            opts.append("s")
+            prompt += "  [s] 这项及剩下的删除项都跳过"
         opts.append("q")
         prompt += "  [q] 退出不写入"
         if c.kind == "file" and c.local is not None:
@@ -411,6 +418,8 @@ def review(pending, ignored, apply_rest=False):
             apply_rest = apply_rest or ans == "a"
         elif ans == "i":
             newly_ignored[c.key] = c.hash
+        elif ans == "s":
+            skip_removals = True
     ignored.update(newly_ignored)
     return accepted
 
@@ -479,7 +488,7 @@ def main():
     if choice == "q":
         print("未做任何改动。")
         return
-    accepted = review(pending, ignored, apply_rest=choice == "a")
+    accepted = review(pending, ignored, apply_rest=choice == "a", strict=strict)
     if accepted is None:
         print("已退出，未做任何改动。")
         return

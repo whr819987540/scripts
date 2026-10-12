@@ -39,7 +39,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 
 发现 4 处差异：
    1. [新增] permissions.deny 追加 "Read(//**/*.pem)"
-   2. [修改] effortLevel："high" → "xhigh"
+   2. [修改] modelSettings.claude-opus-5-5.effortLevel："high" → "xhigh"
    3. [文件] statusline.sh（内容不同：+12 -3 行）
    4. [删除] env.ANTHROPIC_MODEL（本机值："claude-opus-5-5[1m]"）
 
@@ -52,6 +52,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 - `[n]` 本次跳过
 - `[i]` 忽略，远端值不变就不再问
 - `[a]` 这项及剩余全部应用，删除项除外；删除项没有这个选项
+- `[s]` 这项及剩下的删除项都跳过，只有严格比对时的删除项才有；其他项照常处理，下次运行还会再问
 - `[q]` 退出，不写入任何改动
 - `[d]` 看 diff，只有文件项才有
 
@@ -61,7 +62,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 - **每一处新增、修改、删除都要你确认**才会写入。
 - **数组**（比如 `permissions.deny`）：只补本机缺少的元素。
 - **默认不删除**：本机独有的 key 和数组元素都保留。只有远端在 `$remove` 里列出的才会提示「删除」，而且删除项总是逐项确认，选 `[a]` 也不会替你删。
-- **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问。
+- **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问；删除项太多时选 `[s]` 跳过剩下的。
 - **写入前自动备份**，备份名为 `settings.json.bak-sync-<时间>`，状态栏脚本同理。
 - **忽略记录**存在 `~/.claude/.claude-sync-state.json`。远端的值变了会重新询问；想马上重新询问，加 `--all`。
 
