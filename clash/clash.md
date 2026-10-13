@@ -12,10 +12,10 @@
    mkdir -p ~/clash
    ```
 
-2. 下载并解压 Clash。仓库当前目录已有 `clash-linux.zip` 时，可跳过下载。
+2. 下载并解压 Clash。仓库 `clash/` 目录下已有 `clash-linux.zip` 时，可跳过下载。
 
    ```bash
-   curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/clash-linux.zip \
+   curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/clash/clash-linux.zip \
        -o /tmp/clash-linux.zip
    unzip -oq /tmp/clash-linux.zip -d ~/clash
    ```

@@ -94,27 +94,27 @@ _scripts_run() {
 
     case "$command_name" in
         set-proxy)
-            script_name="set_proxy.sh"
+            script_name="proxy/set_proxy.sh"
             execution_mode="source"
             ;;
         unset-proxy)
-            script_name="unset_proxy.sh"
+            script_name="proxy/unset_proxy.sh"
             execution_mode="source"
             ;;
-        docker)       script_name="docker_install.sh" ;;
-        git)          script_name="git_install_config.sh" ;;
-        miniconda)    script_name="miniconda_install.sh" ;;
-        nvm)          script_name="nvm_install.sh" ;;
-        zsh)          script_name="zsh_install.sh" ;;
-        tmux)         script_name="tmux_install.sh" ;;
-        new-user)     script_name="new_user.sh" ;;
-        add-authorized-key) script_name="add_authorized_key.sh" ;;
-        zabbix-agent) script_name="zabbix_agent.sh" ;;
-        clash)        script_name="clash.sh" ;;
-        gpu-docker-processes) script_name="gpu_docker_processes.sh" ;;
-        gpu-interconnect-benchmark) script_name="gpu_interconnect_benchmark.sh" ;;
-        network-speed) script_name="network_speed.sh" ;;
-        container-mem) script_name="container_mem.sh" ;;
+        docker)       script_name="docker/docker_install.sh" ;;
+        git)          script_name="git/git_install_config.sh" ;;
+        miniconda)    script_name="miniconda/miniconda_install.sh" ;;
+        nvm)          script_name="nvm/nvm_install.sh" ;;
+        zsh)          script_name="zsh/zsh_install.sh" ;;
+        tmux)         script_name="tmux/tmux_install.sh" ;;
+        new-user)     script_name="new-user/new_user.sh" ;;
+        add-authorized-key) script_name="add-authorized-key/add_authorized_key.sh" ;;
+        zabbix-agent) script_name="zabbix-agent/zabbix_agent.sh" ;;
+        clash)        script_name="clash/clash.sh" ;;
+        gpu-docker-processes) script_name="gpu-docker-processes/gpu_docker_processes.sh" ;;
+        gpu-interconnect-benchmark) script_name="gpu-interconnect-benchmark/gpu_interconnect_benchmark.sh" ;;
+        network-speed) script_name="network-speed/network_speed.sh" ;;
+        container-mem) script_name="container-mem/container_mem.sh" ;;
         help|-h|--help)
             _scripts_usage
             return 0

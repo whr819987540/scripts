@@ -44,7 +44,7 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) tmux
    ```
 
-   脚本会让非交互式 bash 和 zsh（例如 `ssh host tmux ls`）也使用这个版本，详细步骤见 `tmux_install.md`。安装成功后，入口还会把 `~/.local/bin` 移到当前 shell 的 PATH 最前面并清空命令缓存（`hash -r`），并执行安装脚本写入的 UTF-8 locale 回退，所以在同一个终端里直接执行 `tmux` 就是新版本、不会乱码，不必重新登录。用 `bash run.sh tmux` 而不是 `source` 执行时，入口无法修改当前 shell，需要打开新的终端。
+   脚本会让非交互式 bash 和 zsh（例如 `ssh host tmux ls`）也使用这个版本，详细步骤见 `tmux/tmux_install.md`。安装成功后，入口还会把 `~/.local/bin` 移到当前 shell 的 PATH 最前面并清空命令缓存（`hash -r`），并执行安装脚本写入的 UTF-8 locale 回退，所以在同一个终端里直接执行 `tmux` 就是新版本、不会乱码，不必重新登录。用 `bash run.sh tmux` 而不是 `source` 执行时，入口无法修改当前 shell，需要打开新的终端。
 
    持续测量 `eth0` 的区间平均和累计平均网络速度：
 
@@ -62,7 +62,7 @@
        gpu-interconnect-benchmark /data/gpu-benchmark 0,1,2,3
    ```
 
-   两个可选参数依次为工作目录和逗号分隔的物理 GPU 编号；均省略时使用 `~/gpu-interconnect-benchmark` 和检测到的全部 GPU。详细的逐步命令及双向带宽口径见 `gpu_interconnect_benchmark.md`。
+   两个可选参数依次为工作目录和逗号分隔的物理 GPU 编号；均省略时使用 `~/gpu-interconnect-benchmark` 和检测到的全部 GPU。详细的逐步命令及双向带宽口径见 `gpu-interconnect-benchmark/gpu_interconnect_benchmark.md`。
 
    需要修改当前终端环境的 `set-proxy` 和 `unset-proxy` 命令也必须使用 `source`。例如，使用默认地址设置代理：
 

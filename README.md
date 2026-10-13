@@ -2,6 +2,31 @@
 
 **这个仓库用来存放一些实用的脚本。**
 
+## 目录结构
+
+每个功能一个目录，目录名与 `run.sh` 的命令名一致，脚本和同名的 step-by-step 文档放在一起：
+
+| 目录 | `run.sh` 命令 | 内容 |
+|---|---|---|
+| `proxy/` | `set-proxy`、`unset-proxy` | 设置 / 清除当前 shell 的代理环境变量 |
+| `docker/` | `docker` | 安装 Docker |
+| `git/` | `git` | 安装配置 Git、SSH 密钥和 GitHub SSH 代理 |
+| `miniconda/` | `miniconda` | 无交互安装 Miniconda |
+| `nvm/` | `nvm` | 安装 nvm 和 Node.js |
+| `zsh/` | `zsh` | 安装配置 Zsh、Oh My Zsh 和插件 |
+| `tmux/` | `tmux` | 安装 tmux 3.7b 并写入 `~/.tmux.conf` |
+| `new-user/` | `new-user` | 创建并配置用户 |
+| `add-authorized-key/` | `add-authorized-key` | 添加 SSH 授权公钥 |
+| `zabbix-agent/` | `zabbix-agent` | 安装配置 Zabbix Agent |
+| `clash/` | `clash` | 安装运行 Clash（含 `clash-linux.zip`） |
+| `gpu-docker-processes/` | `gpu-docker-processes` | 查看 GPU 进程所属的 Docker 容器 |
+| `gpu-interconnect-benchmark/` | `gpu-interconnect-benchmark` | GPU 互联带宽与 NCCL 测试 |
+| `network-speed/` | `network-speed` | 监控网卡速度 |
+| `container-mem/` | `container-mem` | 分析容器内存占用 |
+| `python-utils/` | — | Python 日志初始化等工具函数 |
+
+根目录只保留统一入口 `run.sh` 及其文档 `run.md`。
+
 ## Linux 远程执行
 
 通过统一入口传入命令名称：
@@ -20,7 +45,7 @@ source <(curl -fsSL "$SCRIPTS_BASE_URL/run.sh") docker
 安装clash:
 
 ```bash
-export clash_download_url="https://gitee.com/hit_whr/scripts/raw/main/clash-linux.zip"
+export clash_download_url="https://gitee.com/hit_whr/scripts/raw/main/clash/clash-linux.zip"
 export config_url="xxx"
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash
 ```

@@ -17,8 +17,8 @@ Environment:
   config_url            Required URL of the Clash configuration file
   clash_download_url    Clash archive URL; defaults to this repository. 
                         Official: https://glados.rocks/tools/clash-linux.zip
-                        Github: https://raw.githubusercontent.com/whr819987540/scripts/main/clash-linux.zip
-                        Gitee: https://gitee.com/hit_whr/scripts/raw/main/clash-linux.zip
+                        Github: https://raw.githubusercontent.com/whr819987540/scripts/main/clash/clash-linux.zip
+                        Gitee: https://gitee.com/hit_whr/scripts/raw/main/clash/clash-linux.zip
 EOF
 }
 
@@ -55,7 +55,7 @@ install_dir="${HOME}/clash"
 config_path="${install_dir}/glados.yaml"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 archive_path="${script_dir}/clash-linux.zip"
-clash_download_url="${clash_download_url:-https://raw.githubusercontent.com/whr819987540/scripts/main/clash-linux.zip}"
+clash_download_url="${clash_download_url:-https://raw.githubusercontent.com/whr819987540/scripts/main/clash/clash-linux.zip}"
 temporary_archive=""
 temporary_config=""
 

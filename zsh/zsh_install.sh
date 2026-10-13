@@ -146,7 +146,7 @@ write_zshrc() {
     {
         printf '%s\n' "$ZSHRC_BLOCK_BEGIN"
         cat <<'EOF'
-# Managed by https://github.com/whr819987540/scripts/blob/main/zsh_install.sh
+# Managed by https://github.com/whr819987540/scripts/blob/main/zsh/zsh_install.sh
 # Rerunning the script rewrites this block. Put personal settings below it.
 
 export ZSH="$HOME/.oh-my-zsh"
