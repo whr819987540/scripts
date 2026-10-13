@@ -97,24 +97,25 @@ plugins=(
 
 source "$ZSH/oh-my-zsh.sh"
 
-# Load personal environment variables without making them part of this file.
-[[ -f "$HOME/.env_var" ]] && source "$HOME/.env_var"
-
-# Initialize Conda from a portable location when it is installed.
-if command -v conda >/dev/null 2>&1 && \
-    __conda_setup="$(conda shell.zsh hook 2>/dev/null)"; then
-    eval "$__conda_setup"
-    unset __conda_setup
-else
-    unset __conda_setup
-    for __conda_root in "$HOME/miniconda3" "$HOME/anaconda3"; do
-        if [[ -f "$__conda_root/etc/profile.d/conda.sh" ]]; then
-            source "$__conda_root/etc/profile.d/conda.sh"
-            break
-        fi
-    done
-    unset __conda_root
+# Initialize Conda like `conda init` does, so conda's own auto_activate_base setting
+# decides whether base is activated. conda is not on PATH in a fresh shell, so also
+# look in the usual install locations.
+for __conda_bin in "$(command -v conda 2>/dev/null)" \
+    "$HOME/miniconda3/bin/conda" "$HOME/anaconda3/bin/conda"; do
+    [[ -x "$__conda_bin" ]] && break
+done
+if [[ -x "$__conda_bin" ]]; then
+    if __conda_setup="$("$__conda_bin" shell.zsh hook 2>/dev/null)"; then
+        eval "$__conda_setup"
+    elif [[ -f "${__conda_bin:h:h}/etc/profile.d/conda.sh" ]]; then
+        source "${__conda_bin:h:h}/etc/profile.d/conda.sh"
+    fi
 fi
+unset __conda_bin __conda_setup
+
+# Load personal environment variables without making them part of this file.
+# They come after Conda so they can override what Conda sets.
+[[ -f "$HOME/.env_var" ]] && source "$HOME/.env_var"
 
 # Homebrew uses different standard prefixes on Linux, Intel macOS and Apple Silicon.
 if command -v brew >/dev/null 2>&1; then

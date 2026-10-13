@@ -64,7 +64,15 @@
    source "$ZSH/oh-my-zsh.sh"
    ```
 
-3. 按需在 `~/.zshrc` 中加载个人环境变量、Conda、Homebrew、Clash、NVM 和 Rust 环境。脚本会检测对应文件或命令，仅加载已安装的组件。
+3. 按需在 `~/.zshrc` 中加载 Conda、个人环境变量、Homebrew、Clash、NVM 和 Rust 环境。脚本会检测对应文件或命令，仅加载已安装的组件。
+
+   Conda 与 `conda init` 一样通过 hook 初始化，是否自动激活 base 由 conda 自己的 `auto_activate_base` 设置决定。新的 shell 里 conda 还不在 PATH 上，所以脚本会依次查找 PATH、`~/miniconda3` 和 `~/anaconda3`：
+
+   ```zsh
+   eval "$("$HOME/miniconda3/bin/conda" shell.zsh hook)"
+   ```
+
+   个人环境变量文件 `~/.env_var` 在 Conda 之后加载，以便覆盖 Conda 的设置；它可能包含密钥，不要提交到仓库。
 
    Homebrew 会把自己的 `bin` 目录插到 PATH 最前面。zsh 不读取 `~/.profile`，所以要在 Homebrew 之后把 `~/.local/bin` 放回最前面，让交互式 zsh 与非交互 shell 使用同一个 `~/.local/bin/tmux`：
 
