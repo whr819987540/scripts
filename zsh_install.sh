@@ -166,6 +166,16 @@ plugins=(
 
 source "$ZSH/oh-my-zsh.sh"
 
+# Customize robbyrussell here instead of editing its theme file, which would block
+# updates: show user@host and the full path, and the Git branch as "(main*)".
+# This comes before Conda so that conda can still prefix the environment name.
+PROMPT="%{$fg[yellow]%}%n@%m %{$reset_color%}%(?:%{$fg_bold[green]%}%1{➜%} :%{$fg_bold[red]%}%1{➜%} ) %{$fg[cyan]%}%~%{$reset_color%} "
+PROMPT+='$(git_prompt_info)'
+ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg_bold[blue]%}(%{$fg[red]%}"
+ZSH_THEME_GIT_PROMPT_SUFFIX="%{$reset_color%} "
+ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[blue]%})"
+ZSH_THEME_GIT_PROMPT_DIRTY="*%{$fg_bold[blue]%})"
+
 # Initialize Conda like `conda init` does, so conda's own auto_activate_base setting
 # decides whether base is activated. conda is not on PATH in a fresh shell, so also
 # look in the usual install locations.

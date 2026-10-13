@@ -88,6 +88,17 @@
    source "$ZSH/oh-my-zsh.sh"
    ```
 
+   加载 Oh My Zsh 之后定制 robbyrussell 的提示符：显示 `用户@主机`、从 `~` 开始的完整路径，Git 分支显示为 `(main*)`，例如 `(base) whr@host ➜  ~/code (main*)`。提示符写在配置块里，不修改 Oh My Zsh 的主题文件，以免更新 Oh My Zsh 时冲突。这段放在 Conda 之前，Conda 才能在前面加上环境名：
+
+   ```zsh
+   PROMPT="%{$fg[yellow]%}%n@%m %{$reset_color%}%(?:%{$fg_bold[green]%}%1{➜%} :%{$fg_bold[red]%}%1{➜%} ) %{$fg[cyan]%}%~%{$reset_color%} "
+   PROMPT+='$(git_prompt_info)'
+   ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg_bold[blue]%}(%{$fg[red]%}"
+   ZSH_THEME_GIT_PROMPT_SUFFIX="%{$reset_color%} "
+   ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[blue]%})"
+   ZSH_THEME_GIT_PROMPT_DIRTY="*%{$fg_bold[blue]%})"
+   ```
+
 3. 按需在配置块中加载 Conda、个人环境变量、Homebrew、Clash、NVM 和 Rust 环境。脚本会检测对应文件或命令，仅加载已安装的组件。
 
    Conda 与 `conda init` 一样通过 hook 初始化，是否自动激活 base 由 conda 自己的 `auto_activate_base` 设置决定。新的 shell 里 conda 还不在 PATH 上，所以脚本会依次查找 PATH、`~/miniconda3` 和 `~/anaconda3`：
