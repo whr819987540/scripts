@@ -44,7 +44,7 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) tmux
    ```
 
-   脚本会让非交互式 bash 和 zsh（例如 `ssh host tmux ls`）也使用这个版本，详细步骤见 `tmux_install.md`。
+   脚本会让非交互式 bash 和 zsh（例如 `ssh host tmux ls`）也使用这个版本，详细步骤见 `tmux_install.md`。安装成功后，入口还会把 `~/.local/bin` 移到当前 shell 的 PATH 最前面并清空命令缓存（`hash -r`），所以在同一个终端里直接执行 `tmux` 就是新版本，不必重新登录。用 `bash run.sh tmux` 而不是 `source` 执行时，入口无法修改当前 shell，需要打开新的终端。
 
    持续测量 `eth0` 的区间平均和累计平均网络速度：
 

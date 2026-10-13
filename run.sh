@@ -64,6 +64,24 @@ _scripts_is_sourced() {
     fi
 }
 
+# tmux_install.sh puts tmux in ~/.local/bin, but a shell started before the install may
+# not have that directory on PATH, or may have it after /usr/bin. Move it to the front
+# of this shell's PATH and drop cached command locations so `tmux` runs the new binary.
+_scripts_prefer_local_bin() {
+    local local_bin="$HOME/.local/bin"
+    local rest=":${PATH}:"
+
+    while [[ "$rest" == *":${local_bin}:"* ]]; do
+        rest="${rest/":${local_bin}:"/:}"
+    done
+    rest="${rest#:}"
+    rest="${rest%:}"
+    export PATH="${local_bin}${rest:+:${rest}}"
+    hash -r 2>/dev/null
+    printf '[scripts] Moved %s to the front of PATH in this shell; tmux is now %s\n' \
+        "$local_bin" "$(command -v tmux)"
+}
+
 _scripts_run() {
     local command_name="${1:-help}"
     local script_name=""
@@ -128,11 +146,15 @@ _scripts_run() {
         exit_code=$?
     fi
 
+    if [[ "$command_name" == tmux && "$exit_code" -eq 0 ]] && _scripts_is_sourced; then
+        _scripts_prefer_local_bin
+    fi
+
     rm -f "$temp_file"
     return "$exit_code"
 }
 
 _scripts_run "$@"
 _scripts_status=$?
-unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage
+unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage _scripts_prefer_local_bin
 return "$_scripts_status" 2>/dev/null || exit "$_scripts_status"
