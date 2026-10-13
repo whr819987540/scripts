@@ -125,6 +125,11 @@ elif [[ -x /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+# Homebrew prepends its own bin directory. Keep user-installed tools such as
+# ~/.local/bin/tmux (tmux_install.sh) ahead of it, and drop duplicate entries.
+typeset -U path PATH
+path=("$HOME/.local/bin" $path)
+
 [[ -f "$HOME/.config/clash-for-linux/profile.sh" ]] && \
     source "$HOME/.config/clash-for-linux/profile.sh"
 
@@ -164,7 +169,8 @@ set_default_shell() {
     local zsh_path
 
     zsh_path="$(command -v zsh)"
-    if [[ "${SHELL:-}" == "$zsh_path" ]]; then
+    # -ef also matches /bin/zsh and /usr/bin/zsh on systems where /bin links to /usr/bin.
+    if [[ "${SHELL:-}" -ef "$zsh_path" ]]; then
         return
     fi
 

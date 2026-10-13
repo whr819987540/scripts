@@ -66,6 +66,13 @@
 
 3. 按需在 `~/.zshrc` 中加载个人环境变量、Conda、Homebrew、Clash、NVM 和 Rust 环境。脚本会检测对应文件或命令，仅加载已安装的组件。
 
+   Homebrew 会把自己的 `bin` 目录插到 PATH 最前面。zsh 不读取 `~/.profile`，所以要在 Homebrew 之后把 `~/.local/bin` 放回最前面，让交互式 zsh 与非交互 shell 使用同一个 `~/.local/bin/tmux`：
+
+   ```zsh
+   typeset -U path PATH
+   path=("$HOME/.local/bin" $path)
+   ```
+
 4. 在 `~/.zshrc` 中配置历史记录，使历史在 shell 退出时追加，并避免多个终端实时共享。
 
    ```zsh
@@ -82,6 +89,8 @@
    chsh -s "$(command -v zsh)"
    exec zsh
    ```
+
+   当前登录 shell 已经是同一个 zsh 文件时（包括 `/bin/zsh` 与 `/usr/bin/zsh` 指向同一文件的情况），脚本跳过 `chsh`。
 
 也可以通过统一入口一次完成。脚本生成的完整 `~/.zshrc` 还包含第 3 步所述的可选组件检测：
 
