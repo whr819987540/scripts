@@ -2,7 +2,7 @@
 
 在多台机器之间同步 Claude Code 的用户级配置：
 
-| 远端（本仓库） | 本机 |
+| 远端（本目录） | 本机 |
 |---|---|
 | `shared-settings.json` | `~/.claude/settings.json` |
 | `statusline.sh` | `~/.claude/statusline.sh` |
@@ -13,26 +13,34 @@
 
 在要同步的机器上运行下面一条命令，需要 Python 3.8+。脚本先从 GitHub 下载，5 秒内没有响应就改用 Gitee。
 
+**通过本仓库的统一入口**（Linux / macOS，从 Gitee 下载 `sync.py`，参数原样传给它）
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) claude-sync
+```
+
 **macOS / Linux**
 
 ```bash
-f=$(mktemp) && { curl -fsSL -m 5 https://raw.githubusercontent.com/whr819987540/claude-sync-settings/main/sync.py -o "$f" || curl -fsSL -m 15 https://gitee.com/hit_whr/claude-sync-settings/raw/main/sync.py -o "$f"; } && python3 "$f"; rm -f "$f"
+f=$(mktemp) && { curl -fsSL -m 5 https://raw.githubusercontent.com/whr819987540/scripts/main/claude-sync-settings/sync.py -o "$f" || curl -fsSL -m 15 https://gitee.com/hit_whr/scripts/raw/main/claude-sync-settings/sync.py -o "$f"; } && python3 "$f"; rm -f "$f"
 ```
 
 **Windows PowerShell**
 
 ```powershell
-$f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr819987540/claude-sync-settings/main/sync.py -OutFile $f -TimeoutSec 5 -UseBasicParsing } catch { iwr https://gitee.com/hit_whr/claude-sync-settings/raw/main/sync.py -OutFile $f -TimeoutSec 15 -UseBasicParsing }; python $f; Remove-Item $f
+$f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr819987540/scripts/main/claude-sync-settings/sync.py -OutFile $f -TimeoutSec 5 -UseBasicParsing } catch { iwr https://gitee.com/hit_whr/scripts/raw/main/claude-sync-settings/sync.py -OutFile $f -TimeoutSec 15 -UseBasicParsing }; python $f; Remove-Item $f
 ```
 
 **Windows Git Bash**：用 macOS / Linux 那条，把 `python3` 换成 `python`。如果 `python` 打开的是微软商店，就换成 `py`。
 
-想先看差异、不写入，就在命令里的 `python3 "$f"` 或 `python $f` 后面加 `--dry-run`。
+想先看差异、不写入，就在命令里的 `python3 "$f"` 或 `python $f` 后面加 `--dry-run`；用统一入口时写成 `... run.sh) claude-sync --dry-run`。
+
+逐步执行的命令见 [`sync.md`](sync.md)。
 
 ## 运行过程
 
 ```
-来源：GitHub  https://raw.githubusercontent.com/whr819987540/claude-sync-settings/main/
+来源：GitHub  https://raw.githubusercontent.com/whr819987540/scripts/main/claude-sync-settings/
 本机：C:\Users\me\.claude\settings.json
 
 开启严格比对？本机有、共享配置没有的 key 和数组元素会逐项询问是否删除，$remove 不生效 [y/n] > n
@@ -74,13 +82,13 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 | `--all` | 之前选了忽略的项也重新询问 |
 | `--source auto\|github\|gitee` | 默认 `auto`：先 GitHub，超时或失败再用 Gitee |
 | `--timeout 秒` | GitHub 的超时时间，默认 5 秒 |
-| `--base URL或目录` | 改从指定的 URL 前缀或本地目录读取，用于调试或自建镜像，比如在本仓库里运行 `python sync.py --base .` |
+| `--base URL或目录` | 改从指定的 URL 前缀或本地目录读取，用于调试或自建镜像，比如在本目录里运行 `python sync.py --base .` |
 
 访问 GitHub 需要代理时，脚本会读取 `HTTPS_PROXY` 环境变量；在 Windows 上还会读系统代理设置。
 
 ## 维护远端
 
-在本仓库里编辑 `shared-settings.json` 或 `statusline.sh`，然后：
+编辑本目录下的 `shared-settings.json` 或 `statusline.sh`，然后在 scripts 仓库里：
 
 ```bash
 git commit -am "更新共用配置" && git push
@@ -88,7 +96,9 @@ git commit -am "更新共用配置" && git push
 
 `origin` 配置了两个推送地址，一次 `git push` 会同时推到 GitHub 和 Gitee。
 
-这个仓库是公开的，不要往里放 token、密码这类机密。另外，只放每台机器都通用的项：项目专属或机器专属的配置（比如 `autoMode.environment`）不要放进来。
+本目录原来是独立仓库 `whr819987540/claude-sync-settings`，已连同提交历史并入 scripts 仓库；`sync.py` 现在从 scripts 仓库的 `claude-sync-settings/` 目录读取共享配置，只维护这里即可。
+
+scripts 仓库是公开的，不要往里放 token、密码这类机密。另外，只放每台机器都通用的项：项目专属或机器专属的配置（比如 `autoMode.environment`）不要放进来。
 
 ### 让各机器删掉某一项
 

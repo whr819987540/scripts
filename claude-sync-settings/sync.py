@@ -36,8 +36,8 @@ from pathlib import Path
 
 # 按顺序尝试：默认 GitHub，超时或失败再用 Gitee
 SOURCES = [
-    ("GitHub", "https://raw.githubusercontent.com/whr819987540/claude-sync-settings/main/"),
-    ("Gitee", "https://gitee.com/hit_whr/claude-sync-settings/raw/main/"),
+    ("GitHub", "https://raw.githubusercontent.com/whr819987540/scripts/main/claude-sync-settings/"),
+    ("Gitee", "https://gitee.com/hit_whr/scripts/raw/main/claude-sync-settings/"),
 ]
 FALLBACK_TIMEOUT = 15  # GitHub 之外的来源给更宽的超时
 SHARED_SETTINGS = "shared-settings.json"

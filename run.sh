@@ -34,6 +34,9 @@ Commands:
                 (defaults: eth0, 1 second)
   container-mem [-n N]
                 Analyze memory usage of the current container (top N, default: 15)
+  claude-sync [--dry-run] [--all] [--source auto|github|gitee]
+                Sync shared Claude Code settings and status line to this machine
+                (asks before every change; requires Python 3.8+)
   help          Show this help
 
 Environment:
@@ -85,11 +88,25 @@ _scripts_apply_tmux_install() {
         "$(command -v tmux)" "${LC_ALL:-${LC_CTYPE:-${LANG:-unset}}}"
 }
 
+_scripts_find_python() {
+    local candidate
+
+    for candidate in python3 python; do
+        if command -v "$candidate" >/dev/null 2>&1 &&
+            "$candidate" -c 'import sys; sys.exit(sys.version_info < (3,))' >/dev/null 2>&1; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
 _scripts_run() {
     local command_name="${1:-help}"
     local script_name=""
     local execution_mode="bash"
     local temp_file=""
+    local python_cmd=""
     local exit_code=0
 
     case "$command_name" in
@@ -115,6 +132,10 @@ _scripts_run() {
         gpu-interconnect-benchmark) script_name="gpu-interconnect-benchmark/gpu_interconnect_benchmark.sh" ;;
         network-speed) script_name="network-speed/network_speed.sh" ;;
         container-mem) script_name="container-mem/container_mem.sh" ;;
+        claude-sync)
+            script_name="claude-sync-settings/sync.py"
+            execution_mode="python"
+            ;;
         help|-h|--help)
             _scripts_usage
             return 0
@@ -133,6 +154,13 @@ _scripts_run() {
         return 2
     fi
 
+    if [[ "$execution_mode" == "python" ]]; then
+        python_cmd="$(_scripts_find_python)" || {
+            printf '%s\n' "The $command_name command requires Python 3 (python3 or python)." >&2
+            return 1
+        }
+    fi
+
     temp_file="$(mktemp)" || return 1
     if ! _scripts_download "$script_name" "$temp_file"; then
         printf 'Failed to download %s\n' "$script_name" >&2
@@ -143,6 +171,9 @@ _scripts_run() {
     if [[ "$execution_mode" == "source" ]]; then
         # shellcheck disable=SC1090
         source "$temp_file" "$@"
+        exit_code=$?
+    elif [[ "$execution_mode" == "python" ]]; then
+        "$python_cmd" "$temp_file" "$@"
         exit_code=$?
     else
         bash "$temp_file" "$@"
@@ -159,5 +190,6 @@ _scripts_run() {
 
 _scripts_run "$@"
 _scripts_status=$?
-unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage _scripts_apply_tmux_install
+unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage _scripts_apply_tmux_install \
+    _scripts_find_python
 return "$_scripts_status" 2>/dev/null || exit "$_scripts_status"

@@ -64,6 +64,12 @@
 
    两个可选参数依次为工作目录和逗号分隔的物理 GPU 编号；均省略时使用 `~/gpu-interconnect-benchmark` 和检测到的全部 GPU。详细的逐步命令及双向带宽口径见 `gpu-interconnect-benchmark/gpu_interconnect_benchmark.md`。
 
+   把共享的 Claude Code 配置同步到本机。入口用 `python3`（没有时用 Python 3 的 `python`）执行 `claude-sync-settings/sync.py`，参数原样传入，例如先只看差异：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) claude-sync --dry-run
+   ```
+
    需要修改当前终端环境的 `set-proxy` 和 `unset-proxy` 命令也必须使用 `source`。例如，使用默认地址设置代理：
 
    ```bash
