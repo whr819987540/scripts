@@ -1,6 +1,6 @@
 # tmux 安装与配置步骤
 
-`tmux_install.sh` 从源码编译 tmux 3.7b 并安装到 `~/.local/bin`，让非交互式 bash 和 zsh 也使用这个版本，最后生成 `~/.tmux.conf`。安装本身不需要 root，只有缺少编译依赖时才会用 `sudo` 安装。
+`tmux_install.sh` 从源码编译 tmux 3.7b 并安装到 `~/.local/bin`，让非交互式 bash 和 zsh 也使用这个版本，在没有 UTF-8 locale 的 shell 中回退到 UTF-8 locale（避免 tmux 乱码），最后生成 `~/.tmux.conf`。安装本身不需要 root，只有缺少编译依赖时才会用 `sudo` 安装。
 
 ## 编译安装 tmux 3.7b
 
@@ -79,6 +79,39 @@
    env -i HOME="$HOME" PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
        SSH_CLIENT="127.0.0.1 0 0" bash -c 'command -v tmux; tmux -V'
    ```
+
+## 检测并修复 tmux 乱码（UTF-8 locale）
+
+tmux 客户端只看 `LC_ALL`、`LC_CTYPE`、`LANG` 中第一个已设置的变量：不含 `UTF-8` 时，它把 `➜`、中文等非 ASCII 字符显示成 `_`。容器里常常一个都没设置（`locale charmap` 输出 `ANSI_X3.4-1968`），SSH 客户端也不一定传 `LANG`。
+
+1. 检测当前 shell 和已安装的 UTF-8 locale。
+
+   ```bash
+   echo "${LC_ALL:-${LC_CTYPE:-${LANG:-unset}}}"
+   locale charmap
+   locale -a | grep -i utf
+   ```
+
+2. 选一个已安装的 UTF-8 locale：优先 `en_US.UTF-8`，其次 `C.UTF-8`，都没有时用任意一个 UTF-8 locale。一个都没有时先生成，例如 `sudo locale-gen en_US.UTF-8`。
+
+3. 与 PATH 那段一样，把下面这段插到 `~/.bashrc` 最前面，并追加到 `~/.zshenv` 末尾。shell 启动时只在没有 UTF-8 locale 的情况下设置 `LANG`，已经是 UTF-8 的机器不受影响：
+
+   ```bash
+   # >>> UTF-8 locale for tmux (tmux_install.sh) >>>
+   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+       *[Uu][Tt][Ff]-8*|*[Uu][Tt][Ff]8*) ;;
+       *) export LANG=en_US.UTF-8 ;;
+   esac
+   # <<< UTF-8 locale for tmux <<<
+   ```
+
+4. 验证：在新的终端里进入 tmux 后执行下面的命令，输出 `1` 表示 tmux 把客户端识别为 UTF-8：
+
+   ```bash
+   tmux display -p '#{client_utf8}'
+   ```
+
+   脚本最后检查非交互 bash 和 zsh 的 locale，不是 UTF-8 时打印警告。已经在运行的 tmux server 中，新开的 pane 会读取 `~/.zshenv`，因此也会得到 UTF-8 locale；乱码的客户端需要从新的终端重新 attach。
 
 ## 写入 `~/.tmux.conf`
 

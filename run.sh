@@ -64,10 +64,11 @@ _scripts_is_sourced() {
     fi
 }
 
-# tmux_install.sh puts tmux in ~/.local/bin, but a shell started before the install may
-# not have that directory on PATH, or may have it after /usr/bin. Move it to the front
-# of this shell's PATH and drop cached command locations so `tmux` runs the new binary.
-_scripts_prefer_local_bin() {
+# tmux_install.sh changes ~/.bashrc and ~/.zshenv, which this shell read before the
+# install. Apply the changes here so `tmux` works right away: move ~/.local/bin to the
+# front of PATH (it may be missing or come after /usr/bin), drop cached command
+# locations, and run the UTF-8 locale fallback that the installer wrote.
+_scripts_apply_tmux_install() {
     local local_bin="$HOME/.local/bin"
     local rest=":${PATH}:"
 
@@ -78,8 +79,10 @@ _scripts_prefer_local_bin() {
     rest="${rest%:}"
     export PATH="${local_bin}${rest:+:${rest}}"
     hash -r 2>/dev/null
-    printf '[scripts] Moved %s to the front of PATH in this shell; tmux is now %s\n' \
-        "$local_bin" "$(command -v tmux)"
+    eval "$(sed -n '/^# >>> UTF-8 locale for tmux /,/^# <<< UTF-8 locale for tmux /p' \
+        "$HOME/.zshenv" 2>/dev/null)"
+    printf '[scripts] Updated this shell: tmux is now %s, locale %s\n' \
+        "$(command -v tmux)" "${LC_ALL:-${LC_CTYPE:-${LANG:-unset}}}"
 }
 
 _scripts_run() {
@@ -147,7 +150,7 @@ _scripts_run() {
     fi
 
     if [[ "$command_name" == tmux && "$exit_code" -eq 0 ]] && _scripts_is_sourced; then
-        _scripts_prefer_local_bin
+        _scripts_apply_tmux_install
     fi
 
     rm -f "$temp_file"
@@ -156,5 +159,5 @@ _scripts_run() {
 
 _scripts_run "$@"
 _scripts_status=$?
-unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage _scripts_prefer_local_bin
+unset -f _scripts_run _scripts_download _scripts_is_sourced _scripts_usage _scripts_apply_tmux_install
 return "$_scripts_status" 2>/dev/null || exit "$_scripts_status"

@@ -12,6 +12,8 @@ readonly TMUX_CONF_FILE="$HOME/.tmux.conf"
 readonly SSH_COMMAND_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 readonly PATH_BLOCK_BEGIN="# >>> ~/.local/bin for non-interactive shells (tmux_install.sh) >>>"
 readonly PATH_BLOCK_END="# <<< ~/.local/bin for non-interactive shells <<<"
+readonly LOCALE_BLOCK_BEGIN="# >>> UTF-8 locale for tmux (tmux_install.sh) >>>"
+readonly LOCALE_BLOCK_END="# <<< UTF-8 locale for tmux <<<"
 
 usage() {
     cat <<EOF
@@ -19,7 +21,8 @@ Usage:
   tmux_install.sh
 
 Build tmux ${TMUX_VERSION} from source into ~/.local/bin, make non-interactive
-bash and zsh find it there, and write ~/.tmux.conf.
+bash and zsh find it there, fall back to a UTF-8 locale in shells that start
+without one (otherwise tmux shows non-ASCII text as "_"), and write ~/.tmux.conf.
 
 Environment:
   tmux_download_url  Source tarball URL (defaults to the GitHub release);
@@ -165,20 +168,59 @@ EOF
     printf '%s\n' "$PATH_BLOCK_END"
 }
 
-add_path_block() {
+# tmux replaces non-ASCII text with "_" unless the first of LC_ALL, LC_CTYPE and LANG
+# that is set names a UTF-8 locale. Containers often set none of them, so fall back to
+# an installed UTF-8 locale whenever the shell starts without one.
+locale_block() {
+    printf '%s\n' "$LOCALE_BLOCK_BEGIN"
+    cat <<EOF
+case "\${LC_ALL:-\${LC_CTYPE:-\${LANG:-}}}" in
+    *[Uu][Tt][Ff]-8*|*[Uu][Tt][Ff]8*) ;;
+    *) export LANG=$1 ;;
+esac
+EOF
+    printf '%s\n' "$LOCALE_BLOCK_END"
+}
+
+is_utf8_locale() {
+    [[ "$1" =~ [Uu][Tt][Ff]-?8 ]]
+}
+
+# Print the UTF-8 locale to fall back on: en_US.UTF-8 when installed (as on the HUST
+# machines), otherwise C.UTF-8, otherwise any installed UTF-8 locale.
+pick_utf8_locale() {
+    local locales
+    local candidate
+
+    locales="$(locale -a 2>/dev/null || true)"
+    for candidate in en_US C; do
+        if grep -qix "${candidate}\.utf-\?8" <<<"$locales"; then
+            printf '%s.UTF-8\n' "$candidate"
+            return
+        fi
+    done
+    grep -i -m 1 'utf-\?8$' <<<"$locales" || true
+}
+
+# Add a marked block to an rc file once, at the top or at the bottom. The first argument
+# after the description is the command that prints the block.
+add_rc_block() {
     local rc_file="$1"
     local position="$2"
+    local begin_marker="$3"
+    local description="$4"
     local generated_file
     local backup_file
 
-    if [[ -f "$rc_file" ]] && grep -qF "$PATH_BLOCK_BEGIN" "$rc_file"; then
-        log "${rc_file} already puts ~/.local/bin on PATH"
+    shift 4
+    if [[ -f "$rc_file" ]] && grep -qF "$begin_marker" "$rc_file"; then
+        log "${rc_file} already has the ${description} block"
         return
     fi
 
     generated_file="$work_dir/$(basename "$rc_file")"
     if [[ "$position" == top ]]; then
-        path_block >"$generated_file"
+        "$@" >"$generated_file"
         if [[ -f "$rc_file" ]]; then
             printf '\n' >>"$generated_file"
             cat "$rc_file" >>"$generated_file"
@@ -189,7 +231,7 @@ add_path_block() {
             cat "$rc_file" >>"$generated_file"
             printf '\n' >>"$generated_file"
         fi
-        path_block >>"$generated_file"
+        "$@" >>"$generated_file"
     fi
 
     if [[ -e "$rc_file" ]]; then
@@ -200,7 +242,34 @@ add_path_block() {
 
     # Write through the existing file so a symlinked dotfile keeps its link.
     cat "$generated_file" >"$rc_file"
-    log "Put ~/.local/bin on PATH in ${rc_file}"
+    log "Added the ${description} block to ${rc_file}"
+}
+
+# Ubuntu's ~/.bashrc returns early in non-interactive shells, so its blocks must come
+# before that check; bash reads ~/.bashrc when it runs an SSH command. zsh reads
+# ~/.zshenv in every shell, including non-interactive ones.
+add_shell_block() {
+    add_rc_block "$HOME/.bashrc" top "$@"
+    add_rc_block "$HOME/.zshenv" bottom "$@"
+}
+
+setup_utf8_locale() {
+    local current="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+    local utf8_locale
+
+    utf8_locale="$(pick_utf8_locale)"
+    if [[ -z "$utf8_locale" ]]; then
+        log "Warning: no UTF-8 locale is installed, so tmux will show non-ASCII text as \"_\"."
+        log "Generate one first, for example: sudo locale-gen en_US.UTF-8"
+        return
+    fi
+
+    if is_utf8_locale "$current"; then
+        log "This shell uses the UTF-8 locale ${current}; other shells fall back to ${utf8_locale} without one"
+    else
+        log "This shell's locale (${current:-unset}) is not UTF-8, so tmux would show non-ASCII text as \"_\"; falling back to ${utf8_locale}"
+    fi
+    add_shell_block "$LOCALE_BLOCK_BEGIN" "UTF-8 locale" locale_block "$utf8_locale"
 }
 
 write_tmux_conf() {
@@ -246,23 +315,32 @@ verify_non_interactive_shells() {
     local shell_name
     local shell_path
     local result
+    local tmux_result
+    local shell_locale
     local failed=0
 
     for shell_name in bash zsh; do
         shell_path="$(command -v "$shell_name" || true)"
         [[ -n "$shell_path" ]] || continue
 
-        # Reproduce `ssh host command`: start from the bare PATH, and set SSH_CLIENT
-        # so that bash reads ~/.bashrc the way it does for SSH commands.
+        # Reproduce `ssh host command`: start from the bare PATH without locale variables,
+        # and set SSH_CLIENT so that bash reads ~/.bashrc the way it does for SSH commands.
         result="$(env -i HOME="$HOME" PATH="$SSH_COMMAND_PATH" SSH_CLIENT="127.0.0.1 0 0" \
-            "$shell_path" -c 'command -v tmux && tmux -V' 2>/dev/null || true)"
-        result="${result//$'\n'/: }"
-        if [[ "$result" == *"tmux ${TMUX_VERSION}" ]]; then
-            log "Non-interactive ${shell_name} runs ${result}"
+            "$shell_path" -c 'command -v tmux && tmux -V; printf "locale=%s\n" "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"' \
+            2>/dev/null || true)"
+        shell_locale="${result##*locale=}"
+        tmux_result="${result%locale=*}"
+        tmux_result="${tmux_result%$'\n'}"
+        tmux_result="${tmux_result//$'\n'/: }"
+        if [[ "$tmux_result" == *"tmux ${TMUX_VERSION}" ]]; then
+            log "Non-interactive ${shell_name} runs ${tmux_result} with locale ${shell_locale:-unset}"
         else
             printf 'Non-interactive %s does not run tmux %s (got: %s)\n' \
-                "$shell_name" "$TMUX_VERSION" "${result:-no tmux}" >&2
+                "$shell_name" "$TMUX_VERSION" "${tmux_result:-no tmux}" >&2
             failed=1
+        fi
+        if ! is_utf8_locale "$shell_locale"; then
+            log "Warning: non-interactive ${shell_name} has no UTF-8 locale; tmux will show non-ASCII text as \"_\""
         fi
     done
 
@@ -306,11 +384,8 @@ report_running_server() {
 }
 
 build_and_install
-# Ubuntu's ~/.bashrc returns early in non-interactive shells, so the block must come
-# before that check. bash reads ~/.bashrc when it runs an SSH command.
-add_path_block "$HOME/.bashrc" top
-# zsh reads ~/.zshenv in every shell, including non-interactive ones.
-add_path_block "$HOME/.zshenv" bottom
+add_shell_block "$PATH_BLOCK_BEGIN" "~/.local/bin PATH" path_block
+setup_utf8_locale
 write_tmux_conf
 verify_non_interactive_shells
 warn_about_earlier_tmux
