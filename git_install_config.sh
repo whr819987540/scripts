@@ -21,6 +21,17 @@ Environment:
 EOF
 }
 
+run_as_root() {
+    if [[ "${EUID}" -eq 0 ]]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo "$@"
+    else
+        printf 'Cannot install missing packages without root privileges or sudo access.\n' >&2
+        exit 1
+    fi
+}
+
 if (( $# > 1 )); then
     printf '%s\n\n' 'Too many arguments.' >&2
     usage >&2
@@ -70,8 +81,8 @@ fi
 
 if (( ${#packages[@]} > 0 )); then
     printf 'Installing required packages: %s\n' "${packages[*]}"
-    apt-get update
-    apt-get install -y "${packages[@]}"
+    run_as_root apt-get update
+    run_as_root apt-get install -y "${packages[@]}"
 fi
 
 git config --global user.email "$GIT_USER_EMAIL"

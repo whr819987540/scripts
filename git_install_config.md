@@ -2,7 +2,7 @@
 
 `git_install_config.sh` 按需安装 Git 和 OpenBSD netcat，配置全局 Git 身份及代理，复用或生成 SSH 公钥，并让 GitHub SSH 连接通过 HTTP 代理访问 `ssh.github.com:443`。
 
-如果系统缺少 Git 或 `nc`，安装命令不使用 `sudo`，因此应以 root 用户运行；已经安装所需命令时不要求 root 权限。
+请以要配置的用户身份运行，不要整体加 `sudo`，否则配置的是 root 的 Git 和 SSH。缺少 Git 或 `nc` 时，脚本以 root 身份运行安装命令：当前已是 root（例如容器内）时直接执行，否则通过 `sudo` 执行；已经安装所需命令时不需要 root 权限。
 
 1. 设置代理地址。未设置时，脚本默认使用 `http://127.0.0.1:7890`。
 
@@ -15,8 +15,8 @@
 
    ```bash
    if ! command -v git >/dev/null 2>&1; then
-       apt-get update
-       apt-get install -y git
+       sudo apt-get update
+       sudo apt-get install -y git
    fi
    ```
 
@@ -24,10 +24,12 @@
 
    ```bash
    if ! command -v nc >/dev/null 2>&1; then
-       apt-get update
-       apt-get install -y netcat-openbsd
+       sudo apt-get update
+       sudo apt-get install -y netcat-openbsd
    fi
    ```
+
+   以 root 身份运行时（例如容器内没有 `sudo`）去掉命令前的 `sudo`。
 
 4. 设置提交身份、HTTP/HTTPS 代理和编辑器。
 
