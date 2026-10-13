@@ -12,7 +12,7 @@ Commands:
                 Set proxy variables in the current shell (default: 127.0.0.1:7890)
   unset-proxy   Unset proxy variables in the current shell
   docker        Install Docker
-  git           Install and configure Git
+  git           Install/configure Git, an SSH key, and the GitHub SSH proxy
   miniconda [silent] [installer-path]
                 Install Miniconda without prompts; reuse an existing installer
   nvm           Install the latest stable nvm and Node.js releases
