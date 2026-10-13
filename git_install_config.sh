@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly GIT_USER_EMAIL="819987540@qq.com"
-readonly GIT_USER_NAME="whr81998754"
+readonly GIT_USER_NAME="whr819987540"
 readonly SSH_CONFIG_BEGIN="# BEGIN scripts: github proxy"
 readonly SSH_CONFIG_END="# END scripts: github proxy"
 
