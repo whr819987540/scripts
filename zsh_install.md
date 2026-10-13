@@ -1,24 +1,24 @@
 # Zsh 安装与配置步骤
 
-`zsh_install.sh` 安装 Zsh 和 Git，安装或更新 Oh My Zsh 及三个插件，生成 `~/.zshrc`，最后尝试把 Zsh 设为默认 shell。
+`zsh_install.sh` 安装 Zsh 和 Git，安装或更新 Oh My Zsh 及三个插件，在 `~/.zshrc` 中写入受管配置块，最后尝试把 Zsh 设为默认 shell。
 
 ## 安装依赖
 
-1. 检查 Zsh 和 Git。
+1. 检查 Zsh 和 Git 的版本。按 Oh My Zsh README 的建议，要求 Zsh 不低于 5.0.8、Git 不低于 2.4.11。
 
    ```bash
-   command -v zsh
-   command -v git
+   zsh --version
+   git --version
    ```
 
-2. 安装缺失的软件。Ubuntu/Debian 使用：
+2. 安装缺失或版本过低的软件。Ubuntu/Debian 使用：
 
    ```bash
    sudo apt-get update
    sudo apt-get install -y zsh git
    ```
 
-   脚本还支持 `dnf`、`yum`、`pacman` 和 Homebrew，并且只安装缺失的软件。
+   对已安装的软件包执行安装会升级到包管理器提供的最新版本。脚本还支持 `dnf`、`yum`、`pacman` 和 Homebrew，只处理缺失或过旧的软件，处理后再次检查版本，仍不满足要求时报错退出（例如 CentOS 7 自带的 Zsh 5.0.2 和 Git 1.8.3）。
 
 ## 安装 Oh My Zsh 和插件
 
@@ -48,13 +48,36 @@
 
 ## 配置并启用 Zsh
 
-1. 如果已有 `~/.zshrc`，先创建带时间戳的备份。
+脚本不会覆盖整个 `~/.zshrc`。第 2～4 步的配置写在 `~/.zshrc` 中下面这对标记之间，重新运行脚本时只替换标记之间的内容，标记之外的个人设置保持不变：
+
+```zsh
+# >>> scripts zsh configuration (zsh_install.sh) >>>
+...
+# <<< scripts zsh configuration <<<
+```
+
+脚本按 `~/.zshrc` 的现状处理：
+
+| `~/.zshrc` 的现状 | 处理方式 |
+| --- | --- |
+| 已有这对标记 | 只替换标记之间的内容 |
+| 不存在或为空 | 新建，内容为配置块 |
+| 在标记之外已经加载 Oh My Zsh | 不修改，提示迁移步骤，避免 Oh My Zsh、Conda、nvm 被加载两次 |
+| 其他内容 | 把配置块插到文件开头，原有内容放在后面，可以覆盖配置块中的设置 |
+| 标记不成对或重复 | 报错退出，不修改 |
+
+内容有变化时，脚本先把原文件备份为 `~/.zshrc.backup.<时间戳>`。
+
+配置块直接写在 `~/.zshrc` 中，而不是放到单独的文件再 `source`，这样 nvm 安装器在 `~/.zshrc` 中能找到 `/nvm.sh`，不会再追加一份 nvm 加载代码。
+
+1. 已经在标记之外加载 Oh My Zsh 的 `~/.zshrc` 需要手动迁移：先移开旧文件，重新运行脚本生成配置块，再把旧文件中的个人设置复制到配置块下方。
 
    ```bash
-   cp -p ~/.zshrc ~/.zshrc.backup.$(date +%Y%m%d%H%M%S)
+   mv ~/.zshrc ~/.zshrc.old
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) zsh
    ```
 
-2. 编辑 `~/.zshrc`，设置主题和插件。
+2. 在配置块中设置主题和插件。
 
    ```zsh
    export ZSH="$HOME/.oh-my-zsh"
@@ -64,7 +87,7 @@
    source "$ZSH/oh-my-zsh.sh"
    ```
 
-3. 按需在 `~/.zshrc` 中加载 Conda、个人环境变量、Homebrew、Clash、NVM 和 Rust 环境。脚本会检测对应文件或命令，仅加载已安装的组件。
+3. 按需在配置块中加载 Conda、个人环境变量、Homebrew、Clash、NVM 和 Rust 环境。脚本会检测对应文件或命令，仅加载已安装的组件。
 
    Conda 与 `conda init` 一样通过 hook 初始化，是否自动激活 base 由 conda 自己的 `auto_activate_base` 设置决定。新的 shell 里 conda 还不在 PATH 上，所以脚本会依次查找 PATH、`~/miniconda3` 和 `~/anaconda3`：
 
@@ -81,7 +104,7 @@
    path=("$HOME/.local/bin" $path)
    ```
 
-4. 在 `~/.zshrc` 中配置历史记录，使历史在 shell 退出时追加，并避免多个终端实时共享。
+4. 在配置块中配置历史记录，使历史在 shell 退出时追加，并避免多个终端实时共享。
 
    ```zsh
    HISTFILE="$HOME/.zsh_history"
@@ -100,7 +123,7 @@
 
    当前登录 shell 已经是同一个 zsh 文件时（包括 `/bin/zsh` 与 `/usr/bin/zsh` 指向同一文件的情况），脚本跳过 `chsh`。
 
-也可以通过统一入口一次完成。脚本生成的完整 `~/.zshrc` 还包含第 3 步所述的可选组件检测：
+也可以通过统一入口一次完成。脚本写入的配置块还包含第 3 步所述的可选组件检测：
 
 ```bash
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) zsh
