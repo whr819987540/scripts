@@ -38,6 +38,14 @@
    source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) nvm
    ```
 
+   从源码安装 tmux 3.7b 到 `~/.local/bin`，并写入 `~/.tmux.conf`：
+
+   ```bash
+   source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) tmux
+   ```
+
+   脚本会让非交互式 bash 和 zsh（例如 `ssh host tmux ls`）也使用这个版本，详细步骤见 `tmux_install.md`。
+
    持续测量 `eth0` 的区间平均和累计平均网络速度：
 
    ```bash

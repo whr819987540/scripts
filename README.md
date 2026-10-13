@@ -53,6 +53,12 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) set-proxy
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) docker
 ```
 
+安装 tmux 3.7b 到 `~/.local/bin`（非交互式 shell 也能使用），并写入 `~/.tmux.conf`：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) tmux
+```
+
 查看 NVIDIA GPU 进程所属的 Docker 容器：
 
 ```bash

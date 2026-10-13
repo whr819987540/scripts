@@ -17,6 +17,8 @@ Commands:
                 Install Miniconda without prompts; reuse an existing installer
   nvm           Install the latest stable nvm and Node.js releases
   zsh           Install and configure Zsh, Oh My Zsh, and plugins
+  tmux          Install tmux 3.7b into ~/.local/bin, also for non-interactive
+                shells, and write ~/.tmux.conf
   new-user      Create and configure a user
   add-authorized-key [public-key]
                 Trust a quoted SSH public key for the current user
@@ -37,6 +39,8 @@ Environment:
   config_url    Required by clash; URL of the Clash configuration file
   clash_download_url  
                 Clash archive URL; defaults to this repository
+  tmux_download_url
+                tmux source tarball URL; defaults to the GitHub release
   SCRIPTS_BASE_URL
                 Base URL used to download scripts (defaults to Gitee)
 EOF
@@ -79,6 +83,7 @@ _scripts_run() {
         miniconda)    script_name="miniconda_install.sh" ;;
         nvm)          script_name="nvm_install.sh" ;;
         zsh)          script_name="zsh_install.sh" ;;
+        tmux)         script_name="tmux_install.sh" ;;
         new-user)     script_name="new_user.sh" ;;
         add-authorized-key) script_name="add_authorized_key.sh" ;;
         zabbix-agent) script_name="zabbix_agent.sh" ;;
