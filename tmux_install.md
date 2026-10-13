@@ -101,10 +101,11 @@
    set -g pane-scrollbars-style "fg=colour245,bg=colour236,width=1,pad=0"
 
    # Keep copy-mode open after mouse selection so the view does not jump to bottom.
+   # copy-selection-no-clear also copies on tmux 3.0a; copy-pipe-no-clear without a command does not.
    bind-key -T copy-mode MouseDown1Pane select-pane \; send-keys -X clear-selection
-   bind-key -T copy-mode MouseDragEnd1Pane send-keys -X copy-pipe-no-clear
+   bind-key -T copy-mode MouseDragEnd1Pane send-keys -X copy-selection-no-clear
    bind-key -T copy-mode-vi MouseDown1Pane select-pane \; send-keys -X clear-selection
-   bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-no-clear
+   bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-no-clear
    ```
 
    - `history-limit`：每个 pane 保留 100 万行回滚历史（默认 2000），只对新建的 pane 生效。
