@@ -32,6 +32,8 @@ Commands:
   network-speed [interface] [interval]
                 Monitor interval and cumulative average network speed
                 (defaults: eth0, 1 second)
+  container-mem [-n N]
+                Analyze memory usage of the current container (top N, default: 15)
   help          Show this help
 
 Environment:
@@ -91,6 +93,7 @@ _scripts_run() {
         gpu-docker-processes) script_name="gpu_docker_processes.sh" ;;
         gpu-interconnect-benchmark) script_name="gpu_interconnect_benchmark.sh" ;;
         network-speed) script_name="network_speed.sh" ;;
+        container-mem) script_name="container_mem.sh" ;;
         help|-h|--help)
             _scripts_usage
             return 0

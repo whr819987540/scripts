@@ -78,6 +78,12 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) \
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) network-speed eth0 1
 ```
 
+分析当前容器的内存占用（`-n N` 指定进程列表显示前 N 项，默认 15）：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) container-mem
+```
+
 查看所有可用命令：
 
 ```bash
