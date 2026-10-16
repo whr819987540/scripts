@@ -228,6 +228,13 @@ setopt EXTENDED_HISTORY
 unsetopt SHARE_HISTORY
 unsetopt INC_APPEND_HISTORY
 unsetopt INC_APPEND_HISTORY_TIME
+
+# Turn off mouse reporting left on by a program that did not exit cleanly (for
+# example tmux or vim over a dropped SSH connection); otherwise moving or clicking
+# the mouse types escape sequences into the prompt.
+if [[ $- == *i* && -t 1 ]]; then
+    printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l'
+fi
 EOF
         printf '%s\n' "$ZSHRC_BLOCK_END"
     } >"$block_file"

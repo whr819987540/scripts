@@ -48,7 +48,7 @@
 
 ## 配置并启用 Zsh
 
-脚本不会覆盖整个 `~/.zshrc`。第 2～4 步的配置写在 `~/.zshrc` 中下面这对标记之间，重新运行脚本时只替换标记之间的内容，标记之外的个人设置保持不变：
+脚本不会覆盖整个 `~/.zshrc`。第 2～5 步的配置写在 `~/.zshrc` 中下面这对标记之间，重新运行脚本时只替换标记之间的内容，标记之外的个人设置保持不变：
 
 ```zsh
 # >>> scripts zsh configuration (zsh_install.sh) >>>
@@ -126,7 +126,15 @@
    unsetopt SHARE_HISTORY INC_APPEND_HISTORY INC_APPEND_HISTORY_TIME
    ```
 
-5. 将 Zsh 设为默认 shell，并启动新 shell。
+5. 在配置块末尾关闭终端的鼠标上报。tmux、vim 等程序没有正常退出时（例如 SSH 断线），终端可能还开着鼠标上报，之后移动或点击鼠标会在提示符里打出转义序列。只在交互式 shell 且标准输出是终端时执行，`zsh -i -c ... | ...` 这类管道不受影响：
+
+   ```zsh
+   if [[ $- == *i* && -t 1 ]]; then
+       printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l'
+   fi
+   ```
+
+6. 将 Zsh 设为默认 shell，并启动新 shell。
 
    ```bash
    chsh -s "$(command -v zsh)"
