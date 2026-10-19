@@ -229,11 +229,15 @@ unsetopt SHARE_HISTORY
 unsetopt INC_APPEND_HISTORY
 unsetopt INC_APPEND_HISTORY_TIME
 
-# Turn off mouse reporting left on by a program that did not exit cleanly (for
-# example tmux or vim over a dropped SSH connection); otherwise moving or clicking
-# the mouse types escape sequences into the prompt.
+# Undo terminal state left behind by a full-screen program that did not exit
+# cleanly (for example tmux or vim over a dropped SSH connection):
+# - mouse reporting left on: moving or clicking the mouse types escape sequences;
+# - alternate screen left on: there is no scrollback, so the wheel turns into
+#   Up/Down and browses history. ?1049l also restores a stale saved cursor when
+#   already on the normal screen, so wrap it in ESC 7 / ESC 8.
 if [[ $- == *i* && -t 1 ]]; then
     printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l'
+    printf '\e7\e[?1049l\e8'
 fi
 EOF
         printf '%s\n' "$ZSHRC_BLOCK_END"
