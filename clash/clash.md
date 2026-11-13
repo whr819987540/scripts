@@ -45,6 +45,12 @@
    chmod a+x ~/clash/<Clash可执行文件>
    ```
 
+   再把压缩包自带的 GeoIP 数据库 `Country.mmdb`（与可执行文件同在 `~/clash/clash/`）复制到 `~/clash`。Clash 只在 `-d` 指定的目录中查找该文件，找不到时会从 jsdelivr 下载；机器无法访问 jsdelivr 时，下一步的验证会报 `can't download MMDB` 并失败。`cp -n` 不会覆盖已有的文件。
+
+   ```bash
+   cp -n ~/clash/clash/Country.mmdb ~/clash/
+   ```
+
 6. 验证配置，然后以前台方式启动。
 
    ```bash

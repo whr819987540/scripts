@@ -397,6 +397,15 @@ fi
 
 chmod a+x "$binary_path"
 
+# Clash reads Country.mmdb from the -d directory and downloads it when it is
+# missing, which fails on hosts that cannot reach the download site without the
+# proxy that is about to start. Use the copy bundled next to the executable; a
+# non-empty existing file is kept because it may be newer.
+bundled_mmdb="$(dirname -- "$binary_path")/Country.mmdb"
+if [[ ! -s "${install_dir}/Country.mmdb" && -f "$bundled_mmdb" ]]; then
+    cp -f "$bundled_mmdb" "${install_dir}/Country.mmdb"
+fi
+
 if ! "$binary_path" -t -f "$config_path" -d "$install_dir"; then
     printf '%s\n' 'Clash configuration validation failed.' >&2
     exit 1
