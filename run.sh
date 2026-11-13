@@ -24,9 +24,10 @@ Commands:
                 Trust a quoted SSH public key for the current user
                 (defaults to the key built into the script)
   zabbix-agent  Install and configure Zabbix Agent
-  clash [bg|serve]
+  clash [bg|serve|stop]
                 Install and run Clash; automatically adjust occupied ports
-                (bg: detached from the terminal; serve: as a systemd service)
+                (bg: detached from the terminal; serve: as a systemd service;
+                stop: stop the Clash started in any of these modes)
   gpu-docker-processes
                 Show Docker containers for processes using NVIDIA GPUs
   gpu-interconnect-benchmark [work-dir] [gpu-devices]

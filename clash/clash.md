@@ -102,11 +102,7 @@ export config_url='<订阅地址>'
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash bg
 ```
 
-脚本会自动停止上一次 `bg` 启动的 Clash 后再启动新的，所以重复执行相当于重启，并且会沿用原来的端口。日志在每次启动时清空。停止后台 Clash：
-
-```bash
-kill "$(cat ~/clash/clash.pid)"
-```
+脚本会自动停止上一次 `bg` 启动的 Clash 后再启动新的，所以重复执行相当于重启，并且会沿用原来的端口。日志在每次启动时清空。停止方法见下文“停止”一节。
 
 ## systemd 服务运行
 
@@ -145,6 +141,38 @@ kill "$(cat ~/clash/clash.pid)"
 ```bash
 export config_url='<订阅地址>'
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash serve
+```
+
+## 停止
+
+脚本以任何方式启动的 Clash，命令行都是 `<Clash可执行文件> -f ~/clash/glados.yaml -d ~/clash`，按这一点就能找到它们。
+
+1. 如果是 systemd 服务，用 systemctl 停止。直接结束进程没有用，`Restart=always` 会让 systemd 在 5 秒后重新启动它。服务仍然开机自启，不需要时再禁用。
+
+   ```bash
+   systemctl is-active clash.service
+   sudo systemctl stop clash.service
+   sudo systemctl disable clash.service
+   ```
+
+2. 停止后台运行的 Clash，以及在其他终端前台运行的 Clash（也可以在那个终端里按 `Ctrl+C`）。
+
+   ```bash
+   pgrep -af "$HOME/clash/glados.yaml -d $HOME/clash"
+   pkill -f "$HOME/clash/glados.yaml -d $HOME/clash"
+   rm -f ~/clash/clash.pid
+   ```
+
+3. 在执行过 `set-proxy` 的终端里清除代理变量，否则 curl、git、pip 等会连向已经关闭的端口。此时通过统一入口下载 `unset-proxy` 也会因为走代理而失败，所以直接执行：
+
+   ```bash
+   unset http_proxy https_proxy ftp_proxy all_proxy HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY no_proxy NO_PROXY
+   ```
+
+也可以通过统一入口一次完成第 1、2 步，不需要设置 `config_url`。服务正在运行时会用 sudo 停止它，但不会禁用开机自启：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash stop
 ```
 
 ## 端口

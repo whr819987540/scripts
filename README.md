@@ -51,10 +51,16 @@ export config_url="xxx"
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash
 ```
 
-在后台运行，关闭终端后继续运行（日志 `~/clash/clash.log`，停止用 `kill "$(cat ~/clash/clash.pid)"`）：
+在后台运行，关闭终端后继续运行（日志 `~/clash/clash.log`）：
 
 ```bash
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash bg
+```
+
+停止 Clash（前台、后台和 systemd 服务方式启动的都能停，不需要 `config_url`）：
+
+```bash
+source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash stop
 ```
 
 被占用的端口会自动加一，最终使用的端口在启动前打印出来。要固定端口，先 `export clash_port=7890`（HTTP 代理端口）等变量，详见 `clash/clash.md` 的“端口”一节。

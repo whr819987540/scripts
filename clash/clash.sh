@@ -6,6 +6,7 @@ usage() {
     cat <<'EOF'
 Usage:
   config_url=<url> [clash_download_url=<url>] clash.sh [bg|serve]
+  clash.sh stop
 
 Modes:
   (default)  Run Clash in the foreground
@@ -13,8 +14,11 @@ Modes:
              keeps running after the terminal exits. Output goes to
              ~/clash/clash.log and the PID to ~/clash/clash.pid; running bg
              again first stops the background Clash it started before.
-             Stop it with: kill "$(cat ~/clash/clash.pid)"
   serve      Install and start the Clash systemd service
+  stop       Stop the Clash started by this script in any mode: the systemd
+             service (with sudo; it stays enabled at boot), the bg instance
+             and a foreground instance in another terminal. Needs no
+             config_url.
 
 Ports:
   Listening ports in the config that are in use are incremented to the next
@@ -44,6 +48,7 @@ case "$mode" in
     cli) ;;
     bg) ;;
     serve) ;;
+    stop) ;;
     help|-h|--help)
         usage
         exit 0
@@ -54,6 +59,110 @@ case "$mode" in
         exit 2
         ;;
 esac
+
+install_dir="${HOME}/clash"
+config_path="${install_dir}/glados.yaml"
+log_path="${install_dir}/clash.log"
+pid_path="${install_dir}/clash.pid"
+service_name='clash.service'
+
+# Succeeds when the PID is a Clash process started by this script. Every mode
+# runs "<executable> -f <config_path> -d <install_dir>", so the command line
+# identifies them and also guards against a stale PID file whose PID was reused.
+is_script_clash() {
+    local pid="$1"
+    local cmdline=""
+
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    cmdline="$(tr '\0' ' ' 2>/dev/null <"/proc/${pid}/cmdline")" || return 1
+    [[ "$cmdline" == *" -f ${config_path} -d ${install_dir} " ]]
+}
+
+# Sends SIGTERM, waits up to 5 seconds for the process to exit, then SIGKILL.
+stop_clash_pid() {
+    local pid="$1"
+    local attempt=0
+
+    kill "$pid" 2>/dev/null || true
+    while is_script_clash "$pid" && ((attempt < 50)); do
+        sleep 0.1
+        ((attempt += 1))
+    done
+    if is_script_clash "$pid"; then
+        kill -KILL "$pid" 2>/dev/null || true
+        sleep 0.5
+    fi
+}
+
+# Stops the Clash started by an earlier bg run so its ports can be reused.
+stop_background_clash() {
+    local pid=""
+
+    [[ -f "$pid_path" ]] || return 0
+    pid="$(<"$pid_path")"
+    if is_script_clash "$pid"; then
+        printf 'Stopping the background Clash started earlier (PID %s).\n' "$pid" >&2
+        stop_clash_pid "$pid"
+    fi
+    rm -f "$pid_path"
+}
+
+# Succeeds when clash.service runs the command line that serve mode writes.
+service_is_ours() {
+    local exec_start=""
+
+    exec_start="$(systemctl show -p ExecStart "$service_name" 2>/dev/null)" || return 1
+    [[ "$exec_start" == *" -f ${config_path} -d ${install_dir} "* ]]
+}
+
+# Stops every Clash this script started. The systemd service goes first and
+# through systemctl, because systemd would restart a killed service process.
+stop_all_clash() {
+    local cmdline_path=""
+    local pid=""
+    local stopped=false
+
+    if command -v systemctl >/dev/null 2>&1 \
+        && systemctl is-active --quiet "$service_name" 2>/dev/null; then
+        if service_is_ours; then
+            printf 'Stopping %s.\n' "$service_name"
+            sudo systemctl stop "$service_name"
+            stopped=true
+            if systemctl is-enabled --quiet "$service_name" 2>/dev/null; then
+                printf 'It still starts at boot; to prevent that: sudo systemctl disable %s\n' \
+                    "$service_name"
+            fi
+        else
+            printf '%s is running but does not run %s; leaving it alone.\n' \
+                "$service_name" "$config_path"
+        fi
+    fi
+
+    for cmdline_path in /proc/[0-9]*/cmdline; do
+        pid="${cmdline_path#/proc/}"
+        pid="${pid%/cmdline}"
+        if is_script_clash "$pid"; then
+            printf 'Stopping Clash (PID %s).\n' "$pid"
+            stop_clash_pid "$pid"
+            stopped=true
+        fi
+    done
+    rm -f "$pid_path"
+
+    if ! $stopped; then
+        printf '%s\n' 'No running Clash started by this script was found.'
+        return 0
+    fi
+    # Shells that ran set-proxy now point at a closed port, so even fetching
+    # unset-proxy through curl would fail there; print the plain command.
+    printf '%s\n' 'Clash is stopped. In shells where set-proxy was run, clear the proxy with:' \
+        '  unset http_proxy https_proxy ftp_proxy all_proxy HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY no_proxy NO_PROXY'
+}
+
+if [[ "$mode" == stop ]]; then
+    stop_all_clash
+    exit 0
+fi
 
 if [[ -z "${config_url:-}" ]]; then
     printf '%s\n' 'The config_url environment variable is required.' >&2
@@ -98,10 +207,6 @@ for port_key in "${port_keys[@]}"; do
     requested_ports[$port_key]=$((10#$port_value))
 done
 
-install_dir="${HOME}/clash"
-config_path="${install_dir}/glados.yaml"
-log_path="${install_dir}/clash.log"
-pid_path="${install_dir}/clash.pid"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 archive_path="${script_dir}/clash-linux.zip"
 clash_download_url="${clash_download_url:-https://raw.githubusercontent.com/whr819987540/scripts/main/clash/clash-linux.zip}"
@@ -117,39 +222,6 @@ cleanup() {
     fi
 }
 trap cleanup EXIT
-
-# Succeeds when the PID is a running Clash process that uses this script's config.
-# Checking the command line guards against a stale PID file whose PID was reused.
-is_background_clash() {
-    local pid="$1"
-    local cmdline=""
-
-    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
-    cmdline="$(tr '\0' ' ' 2>/dev/null <"/proc/${pid}/cmdline")" || return 1
-    [[ "$cmdline" == *" -f ${config_path} "* ]]
-}
-
-# Stops the Clash started by an earlier bg run so its ports can be reused.
-stop_background_clash() {
-    local pid=""
-    local attempt=0
-
-    [[ -f "$pid_path" ]] || return 0
-    pid="$(<"$pid_path")"
-    if is_background_clash "$pid"; then
-        printf 'Stopping the background Clash started earlier (PID %s).\n' "$pid" >&2
-        kill "$pid" 2>/dev/null || true
-        while is_background_clash "$pid" && ((attempt < 50)); do
-            sleep 0.1
-            ((attempt += 1))
-        done
-        if is_background_clash "$pid"; then
-            kill -KILL "$pid" 2>/dev/null || true
-            sleep 0.5
-        fi
-    fi
-    rm -f "$pid_path"
-}
 
 declare -A reserved_ports=()
 available_port=""
@@ -428,7 +500,7 @@ if [[ "$mode" == "bg" ]]; then
     printf '%s\n' "$clash_pid" >"$pid_path"
 
     sleep 1
-    if ! is_background_clash "$clash_pid"; then
+    if ! is_script_clash "$clash_pid"; then
         rm -f "$pid_path"
         printf 'Clash exited right after starting. Last lines of %s:\n' "$log_path" >&2
         tail -n 20 "$log_path" >&2
@@ -437,7 +509,9 @@ if [[ "$mode" == "bg" ]]; then
 
     printf 'Clash is running in the background (PID %s).\n' "$clash_pid"
     printf 'Log:  %s\n' "$log_path"
-    printf 'Stop: kill "$(cat %s)"\n' "$pid_path"
+    printf 'Stop: source <(curl -fsSL %s/run.sh) clash stop\n' \
+        "${SCRIPTS_BASE_URL:-https://gitee.com/hit_whr/scripts/raw/main}"
+    printf '      or: kill "$(cat %s)"\n' "$pid_path"
     exit 0
 fi
 
