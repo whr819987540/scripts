@@ -4,6 +4,25 @@
 
 代理地址的优先级为：命令参数、`proxy` 环境变量、默认值 `127.0.0.1:7890`。地址未包含协议时，脚本会自动添加 `http://`。
 
+这些变量只对当前 shell 及其启动的程序生效（curl、wget、pip、git 等会读取它们），其他终端不受影响。执行时脚本会打印代理地址及其来源、是否补全了协议、设置的每个变量，以及撤销用的 `unset-proxy` 命令，例如：
+
+```text
+Proxy address: 127.0.0.1:7890 (default)
+No scheme given; using http://127.0.0.1:7890
+Exported in the current shell:
+  http_proxy=http://127.0.0.1:7890
+  https_proxy=http://127.0.0.1:7890
+  ftp_proxy=http://127.0.0.1:7890
+  all_proxy=http://127.0.0.1:7890
+  HTTP_PROXY=http://127.0.0.1:7890
+  HTTPS_PROXY=http://127.0.0.1:7890
+  FTP_PROXY=http://127.0.0.1:7890
+  ALL_PROXY=http://127.0.0.1:7890
+Programs started from this shell that read these variables (curl, wget,
+pip, git, ...) now use the proxy. Other terminals are not affected.
+Undo: source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) unset-proxy
+```
+
 1. 确定代理地址。以下示例使用默认地址：
 
    ```bash
