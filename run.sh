@@ -24,7 +24,9 @@ Commands:
                 Trust a quoted SSH public key for the current user
                 (defaults to the key built into the script)
   zabbix-agent  Install and configure Zabbix Agent
-  clash [serve] Install and run Clash; automatically adjust occupied ports
+  clash [bg|serve]
+                Install and run Clash; automatically adjust occupied ports
+                (bg: detached from the terminal; serve: as a systemd service)
   gpu-docker-processes
                 Show Docker containers for processes using NVIDIA GPUs
   gpu-interconnect-benchmark [work-dir] [gpu-devices]
@@ -42,8 +44,12 @@ Commands:
 Environment:
   proxy         Proxy URL or host:port used by set-proxy
   config_url    Required by clash; URL of the Clash configuration file
-  clash_download_url  
+  clash_download_url
                 Clash archive URL; defaults to this repository
+  clash_port, clash_socks_port, clash_mixed_port, clash_redir_port,
+  clash_tproxy_port, clash_controller_port
+                Ports clash uses instead of the configured ones; clash
+                fails if a requested port is in use (see clash/clash.md)
   tmux_download_url
                 tmux source tarball URL; defaults to the GitHub release
   SCRIPTS_BASE_URL
