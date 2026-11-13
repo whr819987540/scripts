@@ -78,11 +78,11 @@ printf '%s\n' 'Exported in the current shell:'
 for _set_proxy_name in http_proxy https_proxy ftp_proxy all_proxy \
     HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY; do
     export "${_set_proxy_name}=${_set_proxy_value}"
-    printf '  %s=%s\n' "$_set_proxy_name" "$_set_proxy_value"
+    printf 'export %s=%s\n' "$_set_proxy_name" "$_set_proxy_value"
 done
 for _set_proxy_name in no_proxy NO_PROXY; do
     export "${_set_proxy_name}=${_set_proxy_bypass}"
-    printf '  %s=%s\n' "$_set_proxy_name" "$_set_proxy_bypass"
+    printf 'export %s=%s\n' "$_set_proxy_name" "$_set_proxy_bypass"
 done
 printf '%s\n' \
     'Programs started from this shell that read these variables (curl, wget,' \

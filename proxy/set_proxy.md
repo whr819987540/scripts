@@ -12,16 +12,16 @@
 Proxy address: 127.0.0.1:7890 (default)
 No scheme given; using http://127.0.0.1:7890
 Exported in the current shell:
-  http_proxy=http://127.0.0.1:7890
-  https_proxy=http://127.0.0.1:7890
-  ftp_proxy=http://127.0.0.1:7890
-  all_proxy=http://127.0.0.1:7890
-  HTTP_PROXY=http://127.0.0.1:7890
-  HTTPS_PROXY=http://127.0.0.1:7890
-  FTP_PROXY=http://127.0.0.1:7890
-  ALL_PROXY=http://127.0.0.1:7890
-  no_proxy=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-  NO_PROXY=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+export http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+export ftp_proxy=http://127.0.0.1:7890
+export all_proxy=http://127.0.0.1:7890
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+export FTP_PROXY=http://127.0.0.1:7890
+export ALL_PROXY=http://127.0.0.1:7890
+export no_proxy=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+export NO_PROXY=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 Programs started from this shell that read these variables (curl, wget,
 pip, git, ...) now use the proxy, except for the hosts in no_proxy.
 Other terminals are not affected.
