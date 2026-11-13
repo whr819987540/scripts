@@ -14,10 +14,16 @@
    unset HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY
    ```
 
-3. 确认这些变量已没有值。
+3. 清除 `set-proxy` 设置的不走代理的地址列表。
 
    ```bash
-   env | rg -i '^(http|https|ftp|all)_proxy='
+   unset no_proxy NO_PROXY
+   ```
+
+4. 确认这些变量已没有值。
+
+   ```bash
+   env | rg -i '^(http|https|ftp|all|no)_proxy='
    ```
 
    命令没有输出即表示清除完成。

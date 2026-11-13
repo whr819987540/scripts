@@ -4,7 +4,9 @@
 
 代理地址的优先级为：命令参数、`proxy` 环境变量、默认值 `127.0.0.1:7890`。地址未包含协议时，脚本会自动添加 `http://`。
 
-这些变量只对当前 shell 及其启动的程序生效（curl、wget、pip、git 等会读取它们），其他终端不受影响。执行时脚本会打印代理地址及其来源、是否补全了协议、设置的每个变量，以及撤销用的 `unset-proxy` 命令，例如：
+脚本同时设置 `no_proxy` 和 `NO_PROXY`，列出不走代理的地址：本机（`localhost`、`127.0.0.1`、`::1`）和私有网段（`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`）。这样代理在另一台机器上时，访问本机服务也不会被转发过去。当前 shell 中已有的 `no_proxy`/`NO_PROXY` 条目会合并保留，不会重复。网段写法（CIDR）只有 curl 7.86 及以上、Python requests/pip、Go 程序等支持；更早的 curl 和 wget 会忽略这些条目，访问内网 IP 时仍然走代理，本机地址不受影响。
+
+这些变量只对当前 shell 及其启动的程序生效（curl、wget、pip、git 等会读取它们），其他终端不受影响。执行时脚本会打印代理地址及其来源、是否补全了协议、保留的已有 `no_proxy` 条目、设置的每个变量，以及撤销用的 `unset-proxy` 命令，例如：
 
 ```text
 Proxy address: 127.0.0.1:7890 (default)
@@ -18,8 +20,11 @@ Exported in the current shell:
   HTTPS_PROXY=http://127.0.0.1:7890
   FTP_PROXY=http://127.0.0.1:7890
   ALL_PROXY=http://127.0.0.1:7890
+  no_proxy=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+  NO_PROXY=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 Programs started from this shell that read these variables (curl, wget,
-pip, git, ...) now use the proxy. Other terminals are not affected.
+pip, git, ...) now use the proxy, except for the hosts in no_proxy.
+Other terminals are not affected.
 Undo: source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) unset-proxy
 ```
 
@@ -47,10 +52,18 @@ Undo: source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) uns
    export ALL_PROXY="$proxy_address"
    ```
 
-4. 确认代理变量的值。
+4. 设置不走代理的地址。已有 `no_proxy` 时，把其中的条目用逗号追加到末尾。
 
    ```bash
-   env | sort | rg -i '^(http|https|ftp|all)_proxy='
+   no_proxy_list=localhost,127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+   export no_proxy="$no_proxy_list"
+   export NO_PROXY="$no_proxy_list"
+   ```
+
+5. 确认代理变量的值。
+
+   ```bash
+   env | sort | rg -i '^(http|https|ftp|all|no)_proxy='
    ```
 
 也可以通过统一入口使用默认地址一次完成：

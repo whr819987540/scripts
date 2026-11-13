@@ -1,2 +1,3 @@
 unset http_proxy https_proxy ftp_proxy all_proxy
 unset HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY
+unset no_proxy NO_PROXY
