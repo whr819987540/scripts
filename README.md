@@ -18,7 +18,7 @@
 | `new-user/` | `new-user` | 创建并配置用户 |
 | `add-authorized-key/` | `add-authorized-key` | 添加 SSH 授权公钥 |
 | `zabbix-agent/` | `zabbix-agent` | 安装配置 Zabbix Agent |
-| `clash/` | `clash` | 安装运行 Clash（含 `clash-linux.zip`） |
+| `clash/` | `clash` | 安装运行 Clash（mihomo 内核，备用 Clash v1.10.0；含 `mihomo/` 和 `clash-linux.zip`） |
 | `gpu-docker-processes/` | `gpu-docker-processes` | 查看 GPU 进程所属的 Docker 容器 |
 | `gpu-interconnect-benchmark/` | `gpu-interconnect-benchmark` | GPU 互联带宽与 NCCL 测试 |
 | `network-speed/` | `network-speed` | 监控网卡速度 |
@@ -46,10 +46,11 @@ source <(curl -fsSL "$SCRIPTS_BASE_URL/run.sh") docker
 安装clash:
 
 ```bash
-export clash_download_url="https://gitee.com/hit_whr/scripts/raw/main/clash/clash-linux.zip"
 export config_url="xxx"
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) clash
 ```
+
+默认使用 mihomo 内核，装不上或不支持配置时改用 Clash v1.10.0 内核。内核和 geo 数据都随仓库提供，先从 Gitee 下载，不需要访问 GitHub。用 `export clash_core=clash` 可以只用旧内核。
 
 在后台运行，关闭终端后继续运行（日志 `~/clash/clash.log`）：
 

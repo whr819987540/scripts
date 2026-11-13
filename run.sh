@@ -25,7 +25,8 @@ Commands:
                 (defaults to the key built into the script)
   zabbix-agent  Install and configure Zabbix Agent
   clash [bg|serve|stop]
-                Install and run Clash; automatically adjust occupied ports
+                Install and run Clash with the mihomo core, falling back to the
+                Clash v1.10.0 core; automatically adjust occupied ports
                 (bg: detached from the terminal; serve: as a systemd service;
                 stop: stop the Clash started in any of these modes)
   gpu-docker-processes
@@ -45,8 +46,12 @@ Commands:
 Environment:
   proxy         Proxy URL or host:port used by set-proxy
   config_url    Required by clash; URL of the Clash configuration file
+  clash_core    Core used by clash: auto (default; mihomo, then Clash),
+                mihomo or clash
+  clash_user_agent
+                User-Agent clash uses to download config_url
   clash_download_url
-                Clash archive URL; defaults to this repository
+                clash-linux.zip URL for the Clash core; defaults to this repository
   clash_port, clash_socks_port, clash_mixed_port, clash_redir_port,
   clash_tproxy_port, clash_controller_port
                 Ports clash uses instead of the configured ones; clash

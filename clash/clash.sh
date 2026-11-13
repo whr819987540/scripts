@@ -20,6 +20,16 @@ Modes:
              and a foreground instance in another terminal. Needs no
              config_url.
 
+Cores:
+  The mihomo core is used first; if it cannot be installed or rejects the
+  configuration, the original Clash v1.10.0 core is tried. Both cores and the
+  GeoIP/GeoSite data mihomo needs are bundled in this repository, so nothing
+  is downloaded from GitHub. The configuration is downloaded with a
+  User-Agent that subscription services recognize, so they return a format
+  the core supports: clash.meta for mihomo, ClashforWindows/0.20.39 for Clash.
+  The running Clash and ~/clash/glados.yaml are only replaced after the new
+  configuration passed validation.
+
 Ports:
   Listening ports in the config that are in use are incremented to the next
   free port. The ports finally used are printed before Clash starts and stay
@@ -35,10 +45,13 @@ Ports:
 
 Environment:
   config_url            Required URL of the Clash configuration file
-  clash_download_url    Clash archive URL; defaults to this repository. 
-                        Official: https://glados.rocks/tools/clash-linux.zip
-                        Github: https://raw.githubusercontent.com/whr819987540/scripts/main/clash/clash-linux.zip
-                        Gitee: https://gitee.com/hit_whr/scripts/raw/main/clash/clash-linux.zip
+  clash_core            auto (default; mihomo, then Clash), mihomo or clash
+  clash_user_agent      User-Agent for downloading the configuration,
+                        instead of the one chosen for the core
+  clash_download_url    URL of clash-linux.zip for the Clash core, e.g. the
+                        official https://glados.rocks/tools/clash-linux.zip
+  SCRIPTS_BASE_URL      Mirror of this repository tried first for the
+                        bundled files; then Gitee, then GitHub
 EOF
 }
 
@@ -78,19 +91,44 @@ is_script_clash() {
     [[ "$cmdline" == *" -f ${config_path} -d ${install_dir} " ]]
 }
 
+# Succeeds until process $1 has finished exiting. Its command line turns empty
+# early in the exit, before its sockets are closed. In a multithreaded process
+# such as mihomo the main thread can already be a zombie (state Z) while other
+# threads are still exiting and keep the shared file table, so wait until no
+# thread is left in any other state.
+process_alive() {
+    local task_stat=""
+    local stat=""
+
+    for task_stat in "/proc/$1/task/"*/stat; do
+        stat="$(cat "$task_stat" 2>/dev/null)" || continue
+        stat="${stat##*) }"
+        if [[ -n "$stat" && "${stat:0:1}" != Z ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Sends SIGTERM, waits up to 5 seconds for the process to exit, then SIGKILL.
+# SIGKILL only goes to a process that is still this Clash, in case the PID was
+# reused meanwhile.
 stop_clash_pid() {
     local pid="$1"
     local attempt=0
 
     kill "$pid" 2>/dev/null || true
-    while is_script_clash "$pid" && ((attempt < 50)); do
+    while process_alive "$pid" && ((attempt < 50)); do
         sleep 0.1
         ((attempt += 1))
     done
     if is_script_clash "$pid"; then
         kill -KILL "$pid" 2>/dev/null || true
-        sleep 0.5
+        attempt=0
+        while process_alive "$pid" && ((attempt < 20)); do
+            sleep 0.1
+            ((attempt += 1))
+        done
     fi
 }
 
@@ -170,12 +208,21 @@ if [[ -z "${config_url:-}" ]]; then
     exit 2
 fi
 
-for command_name in curl ss unzip; do
+for command_name in curl ss; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command_name" >&2
         exit 1
     fi
 done
+
+case "${clash_core:-auto}" in
+    auto) cores=(mihomo clash) ;;
+    mihomo|clash) cores=("$clash_core") ;;
+    *)
+        printf 'clash_core must be auto, mihomo or clash: %s\n' "$clash_core" >&2
+        exit 2
+        ;;
+esac
 
 if [[ "$mode" == "bg" ]] && ! command -v setsid >/dev/null 2>&1; then
     printf '%s\n' 'setsid is required for bg mode.' >&2
@@ -208,20 +255,213 @@ for port_key in "${port_keys[@]}"; do
 done
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-archive_path="${script_dir}/clash-linux.zip"
-clash_download_url="${clash_download_url:-https://raw.githubusercontent.com/whr819987540/scripts/main/clash/clash-linux.zip}"
-temporary_archive=""
+# Bundled files next to the script are only used from a checkout of this
+# repository. run.sh runs a temporary copy with another name, and its directory
+# (usually /tmp) may hold files planted by other users.
+local_bundle=false
+if [[ "$(basename -- "${BASH_SOURCE[0]}")" == clash.sh ]]; then
+    local_bundle=true
+fi
+repo_base_urls=()
+if [[ -n "${SCRIPTS_BASE_URL:-}" ]]; then
+    repo_base_urls+=("$SCRIPTS_BASE_URL")
+fi
+repo_base_urls+=(https://gitee.com/hit_whr/scripts/raw/main
+    https://raw.githubusercontent.com/whr819987540/scripts/main)
+mihomo_dir="${install_dir}/mihomo"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/clash-setup.XXXXXX")"
 temporary_config=""
+binary_path=""
 
 cleanup() {
-    if [[ -n "$temporary_archive" ]]; then
-        rm -f "$temporary_archive"
-    fi
+    rm -rf "$work_dir"
     if [[ -n "$temporary_config" ]]; then
         rm -f "$temporary_config"
     fi
 }
 trap cleanup EXIT
+
+# Copies a bundled file (a path under clash/ in this repository) to $2: from the
+# checkout, or from the first mirror that serves it.
+fetch_bundled_file() {
+    local path="$1"
+    local destination="$2"
+    local base=""
+
+    if $local_bundle && [[ -f "${script_dir}/${path}" ]]; then
+        cp -f "${script_dir}/${path}" "$destination"
+        return
+    fi
+    for base in "${repo_base_urls[@]}"; do
+        if curl -fsSL --connect-timeout 15 --retry 2 "${base}/clash/${path}" -o "$destination"; then
+            return 0
+        fi
+        printf 'Could not download %s from %s\n' "$path" "$base" >&2
+    done
+    return 1
+}
+
+# Succeeds when file $1 has the checksum listed for name $2 in SHA256SUMS file $3.
+checksum_matches() {
+    local expected=""
+    local actual=""
+
+    expected="$(awk -v name="$2" '$2 == name { print $1 }' "$3")"
+    actual="$(sha256sum "$1" | cut -d' ' -f1)" || return 1
+    [[ -n "$expected" && "$actual" == "$expected" ]]
+}
+
+# Moves $1 to $2 through a temporary file in the destination directory, so a
+# running Clash that uses $2 keeps its open copy instead of reading a half-written
+# one, and an executable in use does not fail with "Text file busy".
+replace_file() {
+    local staged="${2%/*}/.${2##*/}.new"
+
+    cp -f "$1" "$staged" && mv -f "$staged" "$2"
+}
+
+# Succeeds when the geo data file $1 in the -d directory should be installed: it
+# is missing or empty, or it is the 2022 Country.mmdb copied from clash-linux.zip.
+# Other existing files are kept, since mihomo may have updated them itself.
+needs_geo_file() {
+    local target="${install_dir}/$1"
+
+    [[ ! -s "$target" ]] && return 0
+    [[ "$1" == Country.mmdb && -f "${install_dir}/clash/Country.mmdb" ]] \
+        && cmp -s "$target" "${install_dir}/clash/Country.mmdb"
+}
+
+# Installs the bundled mihomo and its geo data, verified against
+# clash/mihomo/SHA256SUMS, and sets binary_path. An installed binary whose
+# checksum still matches is reused. Called as a condition, so each step checks
+# its own failure instead of relying on set -e.
+prepare_mihomo() {
+    local sums="${work_dir}/SHA256SUMS"
+    local sum=""
+    local name=""
+    local binary_name=""
+    local part=""
+    local file=""
+    local parts=()
+
+    if [[ "$(uname -m)" != x86_64 ]]; then
+        printf 'The bundled mihomo is built for x86_64, not %s.\n' "$(uname -m)" >&2
+        return 1
+    fi
+    for name in gzip sha256sum; do
+        if ! command -v "$name" >/dev/null 2>&1; then
+            printf 'mihomo needs the %s command.\n' "$name" >&2
+            return 1
+        fi
+    done
+    fetch_bundled_file mihomo/SHA256SUMS "$sums" || return 1
+    while read -r sum name; do
+        case "$name" in
+            mihomo-*.gz.part-*) parts+=("$name") ;;
+            mihomo-*) binary_name="$name" ;;
+        esac
+    done <"$sums"
+    if [[ -z "$binary_name" || ${#parts[@]} -eq 0 ]]; then
+        printf 'Unexpected contents in mihomo/SHA256SUMS.\n' >&2
+        return 1
+    fi
+
+    mkdir -p "$mihomo_dir" || return 1
+    binary_path="${mihomo_dir}/${binary_name}"
+    if [[ -f "$binary_path" ]] && checksum_matches "$binary_path" "$binary_name" "$sums"; then
+        printf 'Using the installed %s.\n' "$binary_name"
+    else
+        printf 'Installing %s.\n' "$binary_name"
+        : >"${work_dir}/mihomo.gz" || return 1
+        for part in "${parts[@]}"; do
+            fetch_bundled_file "mihomo/${part}" "${work_dir}/${part}" || return 1
+            if ! checksum_matches "${work_dir}/${part}" "$part" "$sums"; then
+                printf 'Checksum mismatch for mihomo/%s.\n' "$part" >&2
+                return 1
+            fi
+            cat "${work_dir}/${part}" >>"${work_dir}/mihomo.gz" || return 1
+            rm -f "${work_dir}/${part}"
+        done
+        gzip -dc "${work_dir}/mihomo.gz" >"${work_dir}/${binary_name}" || return 1
+        if ! checksum_matches "${work_dir}/${binary_name}" "$binary_name" "$sums"; then
+            printf 'Checksum mismatch for the unpacked %s.\n' "$binary_name" >&2
+            return 1
+        fi
+        chmod 755 "${work_dir}/${binary_name}" || return 1
+        replace_file "${work_dir}/${binary_name}" "$binary_path" || return 1
+    fi
+
+    # mihomo reads these from the -d directory and downloads missing ones from
+    # GitHub, which fails on hosts that need the proxy to reach it.
+    for file in Country.mmdb GeoSite.dat; do
+        needs_geo_file "$file" || continue
+        printf 'Installing %s.\n' "$file"
+        fetch_bundled_file "mihomo/${file}" "${work_dir}/${file}" || return 1
+        if ! checksum_matches "${work_dir}/${file}" "$file" "$sums"; then
+            printf 'Checksum mismatch for mihomo/%s.\n' "$file" >&2
+            return 1
+        fi
+        replace_file "${work_dir}/${file}" "${install_dir}/${file}" || return 1
+    done
+}
+
+# Installs the bundled Clash v1.10.0 and sets binary_path. Called as a condition.
+prepare_clash() {
+    local archive="${work_dir}/clash-linux.zip"
+    local bundled_mmdb=""
+
+    if ! command -v unzip >/dev/null 2>&1; then
+        printf '%s\n' 'The Clash core needs the unzip command.' >&2
+        return 1
+    fi
+    if [[ -n "${clash_download_url:-}" ]]; then
+        curl -fsSL --connect-timeout 15 --retry 2 "$clash_download_url" -o "$archive" || return 1
+    else
+        fetch_bundled_file clash-linux.zip "$archive" || return 1
+    fi
+    unzip -oq "$archive" -d "$install_dir" || return 1
+    binary_path="$(
+        find "$install_dir" -maxdepth 2 -type f -name 'clash-linux-amd64-*' -print \
+            | sort -V \
+            | tail -n 1
+    )"
+    if [[ -z "$binary_path" ]]; then
+        printf 'Clash executable not found under %s\n' "$install_dir" >&2
+        return 1
+    fi
+    chmod a+x "$binary_path" || return 1
+
+    # Clash reads Country.mmdb from the -d directory and downloads it when it is
+    # missing, which fails on hosts that cannot reach the download site without
+    # the proxy. Use the copy bundled next to the executable when there is none.
+    bundled_mmdb="$(dirname -- "$binary_path")/Country.mmdb"
+    if [[ ! -s "${install_dir}/Country.mmdb" && -f "$bundled_mmdb" ]]; then
+        replace_file "$bundled_mmdb" "${install_dir}/Country.mmdb" || return 1
+    fi
+}
+
+config_user_agent() {
+    if [[ -n "${clash_user_agent:-}" ]]; then
+        printf '%s\n' "$clash_user_agent"
+    elif [[ "$1" == mihomo ]]; then
+        printf '%s\n' 'clash.meta'
+    else
+        printf '%s\n' 'ClashforWindows/0.20.39'
+    fi
+}
+
+# Explains a downloaded configuration that is not YAML at all, which the cores
+# only report as a confusing YAML error.
+describe_config_problem() {
+    local start=""
+
+    start="$(head -c 200 "$1" | tr -d '\r\n')"
+    if [[ "$start" == '<'* ]]; then
+        printf '%s\n' 'config_url returned an HTML page, not a Clash configuration.' >&2
+    elif [[ -n "$start" && "$start" != *:* ]]; then
+        printf '%s\n' 'config_url returned what looks like base64-encoded node links, not a Clash configuration.' >&2
+    fi
+}
 
 declare -A reserved_ports=()
 available_port=""
@@ -443,46 +683,48 @@ print_listening_ports() {
 }
 
 mkdir -p "$install_dir"
-if [[ ! -f "$archive_path" ]]; then
-    temporary_archive="$(mktemp "${TMPDIR:-/tmp}/clash-linux.XXXXXX.zip")"
-    archive_path="$temporary_archive"
-    curl -fsSL "$clash_download_url" -o "$archive_path"
+
+# Try the cores in order. Each one gets the configuration downloaded with its
+# own User-Agent, and must accept it before anything that is in use changes.
+core=""
+for candidate_core in "${cores[@]}"; do
+    printf '[clash] Trying the %s core.\n' "$candidate_core"
+    if ! "prepare_${candidate_core}"; then
+        printf '[clash] Could not install the %s core.\n' "$candidate_core" >&2
+        continue
+    fi
+    candidate_config="${work_dir}/config-${candidate_core}.yaml"
+    if ! curl -fsSL --connect-timeout 15 --retry 2 \
+        -A "$(config_user_agent "$candidate_core")" "$config_url" -o "$candidate_config"; then
+        printf '[clash] Could not download config_url.\n' >&2
+        continue
+    fi
+    if "$binary_path" -t -f "$candidate_config" -d "$install_dir"; then
+        core="$candidate_core"
+        break
+    fi
+    describe_config_problem "$candidate_config"
+    printf '[clash] The configuration does not work with the %s core.\n' "$candidate_core" >&2
+done
+
+if [[ -z "$core" ]]; then
+    printf '%s\n' "No core could use the configuration from config_url." \
+        "The running Clash, if any, and ${config_path} were left unchanged." >&2
+    exit 1
 fi
-unzip -oq "$archive_path" -d "$install_dir"
-curl -fsSL "$config_url" -o "$config_path"
-chmod 600 "$config_path"
+
 if [[ "$mode" == "bg" ]]; then
     stop_background_clash
 fi
+install -m 600 "$candidate_config" "$config_path"
 adjust_config_ports
 
-binary_path="$(
-    find "$install_dir" -maxdepth 2 -type f -name 'clash-linux-amd64-*' -print \
-        | sort -V \
-        | tail -n 1
-)"
-
-if [[ -z "$binary_path" ]]; then
-    printf 'Clash executable not found under %s\n' "$install_dir" >&2
+if ! validation_output="$("$binary_path" -t -f "$config_path" -d "$install_dir" 2>&1)"; then
+    printf '%s\n' "$validation_output" 'Validation failed after adjusting the ports.' >&2
     exit 1
 fi
 
-chmod a+x "$binary_path"
-
-# Clash reads Country.mmdb from the -d directory and downloads it when it is
-# missing, which fails on hosts that cannot reach the download site without the
-# proxy that is about to start. Use the copy bundled next to the executable; a
-# non-empty existing file is kept because it may be newer.
-bundled_mmdb="$(dirname -- "$binary_path")/Country.mmdb"
-if [[ ! -s "${install_dir}/Country.mmdb" && -f "$bundled_mmdb" ]]; then
-    cp -f "$bundled_mmdb" "${install_dir}/Country.mmdb"
-fi
-
-if ! "$binary_path" -t -f "$config_path" -d "$install_dir"; then
-    printf '%s\n' 'Clash configuration validation failed.' >&2
-    exit 1
-fi
-
+printf 'Core: %s\n' "$("$binary_path" -v 2>/dev/null | head -n 1)"
 print_listening_ports
 
 if [[ "$mode" == "cli" ]]; then
