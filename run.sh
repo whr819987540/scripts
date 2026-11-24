@@ -38,8 +38,9 @@ Commands:
                 (defaults: eth0, 1 second)
   container-mem [-n N]
                 Analyze memory usage of the current container (top N, default: 15)
-  claude-sync [--dry-run] [--all] [--source auto|github|gitee]
-                Sync shared Claude Code settings and status line to this machine
+  claude-sync [--dry-run] [--all] [--source auto|github|gitee] [--config-dir DIR]
+                Sync shared Claude Code settings, status line and notify hook to this machine;
+                asks which config dir to update (~/.claude, rec accounts, CLAUDE_CONFIG_DIR)
                 (asks before every change; requires Python 3.8+)
   help          Show this help
 

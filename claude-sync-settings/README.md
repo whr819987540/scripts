@@ -4,11 +4,19 @@
 
 | 远端（本目录） | 本机 |
 |---|---|
-| `shared-settings.json` | `~/.claude/settings.json` |
+| `shared-settings.json` | 你选定的配置目录下的 `settings.json` |
 | `statusline.sh` | `~/.claude/statusline.sh` |
 | `hooks/cc_notify.sh`、`cc_notify.py`、`cc_notify.json`、`cc_notify_toast.ps1` | `~/.claude/hooks/` 下同名文件（通知 hook，见 [`hooks/cc_notify.md`](hooks/cc_notify.md)） |
 
-设置了 `CLAUDE_CONFIG_DIR` 时，`settings.json` 写到它下面。`statusline.sh` 和 `hooks/` 总是写到 `~/.claude`，因为共享配置里 `statusLine` 和 `hooks` 的命令写的就是 `$HOME/.claude/...`。
+开始比对前，脚本列出本机的配置目录让你选一个，每次只改一个：
+
+- `~/.claude`：直接运行 `claude` 时使用
+- `~/.rec/claude/accounts/<id>/config`：`rec` 的各个账号，标出登录邮箱和 `rec` 当前账号
+- `CLAUDE_CONFIG_DIR`：不在上面两类里时单独列出
+
+直接回车选 `CLAUDE_CONFIG_DIR`，未设置时选 `~/.claude`。只有 `~/.claude` 一个候选时不询问。注意 `rec` 只给它启动的 `claude` 进程设置 `CLAUDE_CONFIG_DIR`，你自己的终端里没有这个变量，所以要同步 `rec` 账号时，从列表里选对应的那一项。要跳过选择，用 `--config-dir 目录`。
+
+`statusline.sh` 和 `hooks/` 不管选哪个目录，总是写到 `~/.claude`，因为共享配置里 `statusLine` 和 `hooks` 的命令写的就是 `$HOME/.claude/...`。
 
 本机 `settings.json` 里独有的项默认保留，比如只在这台机器上用的代理 `env.HTTPS_PROXY`、`env.NODE_EXTRA_CA_CERTS`；只有开启严格比对时才会逐项询问是否删除，选 `[i]` 以后就不再问。
 
@@ -43,8 +51,13 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 ## 运行过程
 
 ```
+选择要同步的配置目录（每次只改一个）：
+  1. ~/.claude  直接运行 claude 时使用
+  2. ~/.rec/claude/accounts/57528/config  rec 账号 57528（me@example.com），rec 当前账号
+输入编号，直接回车选 1，q 退出 > 2
 来源：GitHub  https://raw.githubusercontent.com/whr819987540/scripts/main/claude-sync-settings/
-本机：C:\Users\me\.claude\settings.json
+本机：/home/me/.rec/claude/accounts/57528/config/settings.json
+共享文件：/home/me/.claude（statusLine、hooks 的命令写的是 $HOME/.claude）
 
 开启严格比对？本机有、共享配置没有的 key 和数组元素会逐项询问是否删除，$remove 不生效 [y/n] > n
 
@@ -86,6 +99,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 | `--all` | 之前选了忽略的项也重新询问 |
 | `--source auto\|github\|gitee` | 默认 `auto`：先 GitHub，超时或失败再用 Gitee |
 | `--timeout 秒` | GitHub 的超时时间，默认 5 秒 |
+| `--config-dir 目录` | 直接同步这个配置目录下的 `settings.json`，不再列出候选让你选 |
 | `--base URL或目录` | 改从指定的 URL 前缀或本地目录读取，用于调试或自建镜像，比如在本目录里运行 `python sync.py --base .` |
 
 访问 GitHub 需要代理时，脚本会读取 `HTTPS_PROXY` 环境变量；在 Windows 上还会读系统代理设置。

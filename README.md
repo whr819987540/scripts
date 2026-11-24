@@ -125,7 +125,7 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) network-s
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) container-mem
 ```
 
-把共享的 Claude Code 配置、状态栏和通知 hook 同步到本机（每处改动都会先确认，需要 Python 3.8+；`--dry-run` 只看差异）：
+把共享的 Claude Code 配置、状态栏和通知 hook 同步到本机（开始前选择要改哪个配置目录：`~/.claude`、`rec` 的各个账号或 `CLAUDE_CONFIG_DIR`，每次只改一个；每处改动都会先确认，需要 Python 3.8+；`--dry-run` 只看差异）：
 
 ```bash
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) claude-sync

@@ -2,12 +2,14 @@
 
 `sync.py` 读取本目录的 `shared-settings.json`、`statusline.sh` 和 `hooks/` 下的通知 hook，与本机 `settings.json`、`~/.claude/statusline.sh`、`~/.claude/hooks/` 比对，逐项确认后写入（写入前自动备份）。本机 `settings.json` 独有的项（比如代理 `env`）默认保留。需要 Python 3.8+，比对规则见 [`README.md`](README.md)。
 
-1. 确认本机写入位置。`settings.json` 在配置目录下，设置了 `CLAUDE_CONFIG_DIR` 时以它为准；`statusline.sh` 和 `hooks/` 总是在 `~/.claude` 下，因为共享配置里的命令写的是 `$HOME/.claude/...`。
+1. 确认要同步哪个配置目录。脚本开始比对前会列出候选：`~/.claude`（直接运行 `claude` 时用）、`rec` 的各个账号、`CLAUDE_CONFIG_DIR`，让你选一个，每次只改一个。`rec` 只给它启动的 `claude` 进程设置 `CLAUDE_CONFIG_DIR`，终端里通常看不到，可以先列出本机有哪些目录：
 
    ```bash
-   echo "settings.json：${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
-   echo "共享文件：$HOME/.claude/statusline.sh  $HOME/.claude/hooks/"
+   ls -d "$HOME/.claude" "$HOME"/.rec/claude/accounts/*/config 2>/dev/null
+   cat "$HOME/.rec/claude/current" 2>/dev/null   # rec 当前账号
    ```
+
+   `statusline.sh` 和 `hooks/` 不管选哪个目录，总是写到 `~/.claude`，因为共享配置里的命令写的是 `$HOME/.claude/...`。
 
 2. 下载同步脚本。先试 GitHub，5 秒内没有响应就改用 Gitee。
 
@@ -30,12 +32,13 @@
    python3 /tmp/claude-sync.py
    ```
 
-   访问 GitHub 需要代理时，先设置 `HTTPS_PROXY`；只想用某一个来源时加 `--source github` 或 `--source gitee`；之前选了「忽略」的项想重新询问时加 `--all`。
+   不想每次选目录时加 `--config-dir 目录`。访问 GitHub 需要代理时，先设置 `HTTPS_PROXY`；只想用某一个来源时加 `--source github` 或 `--source gitee`；之前选了「忽略」的项想重新询问时加 `--all`。
 
 5. 检查写入结果。改动前的文件备份为 `settings.json.bak-sync-<时间>`，需要回退时复制回去即可。
 
    ```bash
-   ls -t "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/settings.json.bak-sync-* | head -n 1
+   # 在所有候选目录里找最新的一份备份
+   ls -t "$HOME"/.claude/settings.json.bak-sync-* "$HOME"/.rec/claude/accounts/*/config/settings.json.bak-sync-* 2>/dev/null | head -n 1
    ```
 
 6. 删除下载的脚本。

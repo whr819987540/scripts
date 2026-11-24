@@ -3,7 +3,9 @@
 """claude-sync：把远端共用的 Claude Code 用户级配置同步到本机。
 
 远端（公开仓库）放 shared-settings.json、statusline.sh 和 hooks/ 下的通知 hook：
-  - shared-settings.json -> <配置目录>/settings.json（配置目录是 CLAUDE_CONFIG_DIR，未设置时是 ~/.claude）
+  - shared-settings.json -> <配置目录>/settings.json。开始比对前列出本机的配置目录让你选一个，每次只改一个：
+    ~/.claude、rec 的各个账号（~/.rec/claude/accounts/*/config）和 CLAUDE_CONFIG_DIR；
+    直接回车选 CLAUDE_CONFIG_DIR，未设置时选 ~/.claude。--config-dir 可以跳过选择
   - statusline.sh、hooks/* -> ~/.claude 下的同名路径。共享配置里的命令写的是
     $HOME/.claude/...，所以这些文件不跟 CLAUDE_CONFIG_DIR 走
 
@@ -62,9 +64,92 @@ MISSING = object()
 
 # ---------------------------------------------------------------- 基础工具
 
-def config_dir():
+def same_path(a, b):
+    return os.path.normcase(os.path.realpath(str(a))) == os.path.normcase(os.path.realpath(str(b)))
+
+
+def tilde(path):
+    """家目录下的路径显示成 ~/...，列表短一些。"""
+    try:
+        return str(Path("~") / path.relative_to(Path.home()))
+    except ValueError:
+        return str(path)
+
+
+def account_email(path):
+    """从配置目录的 .claude.json 读登录邮箱，用来区分 rec 的各个账号；读不到返回空串。"""
+    try:
+        with open(str(path), encoding="utf-8-sig") as f:
+            return (json.load(f).get("oauthAccount") or {}).get("emailAddress") or ""
+    except (OSError, ValueError, AttributeError):
+        return ""
+
+
+def config_dirs():
+    """本机可选的配置目录 [(路径, 说明)] 和默认项下标。
+
+    候选：~/.claude、rec 的各个账号（~/.rec/claude/accounts/<id>/config），以及不在其中的 CLAUDE_CONFIG_DIR。
+    默认项和 Claude Code 自己的规则一致：设置了 CLAUDE_CONFIG_DIR 时是它，否则是 ~/.claude。
+    """
+    home = Path.home()
+    dirs = [(home / ".claude", ["直接运行 claude 时使用"])]
+    rec = home / ".rec" / "claude"
+    try:
+        current = (rec / "current").read_text(encoding="utf-8").strip()
+    except OSError:
+        current = ""
+    for d in sorted((rec / "accounts").glob("*/config")):
+        if not d.is_dir():
+            continue
+        account = d.parent.name
+        note = ["rec 账号 " + account]
+        email = account_email(d / ".claude.json")
+        if email:
+            note[0] += "（%s）" % email
+        if account == current:
+            note.append("rec 当前账号")
+        dirs.append((d, note))
+
+    default = 0
     env = os.environ.get("CLAUDE_CONFIG_DIR")
-    return Path(env).expanduser() if env else Path.home() / ".claude"
+    if env:
+        env_dir = Path(env).expanduser()
+        default = next((i for i, (d, _) in enumerate(dirs) if same_path(d, env_dir)), None)
+        if default is None:
+            dirs.append((env_dir, []))
+            default = len(dirs) - 1
+        dirs[default][1].append("当前 CLAUDE_CONFIG_DIR")
+    return [(d, "，".join(note)) for d, note in dirs], default
+
+
+def choose_config_dir(given):
+    """确定这次改哪个配置目录：给了 --config-dir 就用它；只有一个候选时直接用；否则列出来让你选。
+
+    返回 None 表示你选了退出。
+    """
+    if given:
+        return Path(given).expanduser()
+    dirs, default = config_dirs()
+    if len(dirs) == 1:
+        return dirs[0][0]
+    print("选择要同步的配置目录（每次只改一个）：")
+    for i, (d, note) in enumerate(dirs, 1):
+        if not (d / "settings.json").exists():
+            note += ("，" if note else "") + "还没有 settings.json"
+        print("  %d. %s%s" % (i, tilde(d), "  " + note if note else ""))
+    while True:
+        try:
+            ans = input("输入编号，直接回车选 %d，q 退出 > " % (default + 1)).strip().lower()
+        except EOFError:
+            print()
+            return None
+        if ans == "":
+            return dirs[default][0]
+        if ans == "q":
+            return None
+        if ans.isdigit() and 1 <= int(ans) <= len(dirs):
+            return dirs[int(ans) - 1][0]
+        print("  请输入 1-%d，或 q 退出" % len(dirs))
 
 
 def files_dir():
@@ -461,9 +546,14 @@ def main():
                     help="默认 auto：先 GitHub，超时或失败再用 Gitee")
     ap.add_argument("--base", metavar="URL或目录", help="改从这个 URL 前缀或本地目录读取（调试或自建镜像用）")
     ap.add_argument("--timeout", type=float, default=5, help="GitHub 超时秒数，默认 5")
+    ap.add_argument("--config-dir", metavar="目录",
+                    help="直接同步这个配置目录下的 settings.json，不再询问；默认列出本机的配置目录让你选")
     args = ap.parse_args()
 
-    cfg = config_dir()
+    cfg = choose_config_dir(args.config_dir)
+    if cfg is None:
+        print("未做任何改动。")
+        return
     settings_path = cfg / "settings.json"
     state_path = cfg / STATE_FILE
     files = files_dir()
