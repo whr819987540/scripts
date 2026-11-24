@@ -1,0 +1,73 @@
+// cc_notify.py 的通道开关（JSONC：可写 // 和 /* */ 注释，允许尾逗号）
+// 缺省的键用脚本里的 DEFAULTS；改完对下一次事件生效，不用重启 Claude Code
+{
+  // 终端响铃 BEL：Windows Terminal 标签页出现铃铛、任务栏闪烁（profile 的 bellStyle 含 audible 才出声）
+  // 能经 SSH / WSL 传回你正在看的终端
+  "bell": true,
+
+  // OSC 777 桌面通知：需要 Windows Terminal 1.26+ 并开启 compatibility.allowOSC777，或 Ghostty / Warp
+  // 同样能经 SSH 传回
+  "osc777": false,
+
+  // Windows toast 通知，显示机器 / 项目 / 会话（只在运行 Claude Code 的 Windows 机器上弹，其他系统自动忽略）
+  "toast": true,
+
+  // toast 是否带提示音
+  "toast_sound": true,
+
+  // true = reminder 型 toast：勿扰模式下也弹出，停在屏幕上直到点「知道了」；
+  //        你在该会话里发下一条消息或工具执行完会自动撤掉
+  // false = 普通 toast，几秒后进通知中心
+  "toast_persist": true,
+
+  // 一轮用时少于这么多秒就不发「已完成」（短回合你多半还在看）；
+  // 若之后你一直没回来，约 60 秒后的 idle_prompt 会补一条「等你输入」
+  "stop_min_seconds": 20,
+
+  // 本会话启动的后台 subagent 还没交回结果时不发「已完成」；
+  // 但其 transcript 超过这么多分钟没更新就视为已死，避免一直静默
+  "bg_alive_minutes": 30,
+
+  // 通知里显示的机器名；留空 = 用 hostname（Windows 上是 COMPUTERNAME）
+  "machine": "",
+
+  // 经 ntfy 服务推送到手机 / 浏览器 / 其他电脑；topic 为空时整个通道关闭
+  // 临时切换不用改这里，用 ccphone（= python cc_notify.py phone ...）：
+  //   on|off|away [30m|2h|1d]   临时覆盖 mode，不写时长就保持到下次切换
+  //   reset                     回到这里的 mode
+  //   status | test             查看状态 / 立刻推一条测试消息
+  "ntfy": {
+    // always = 总是推
+    // away   = 本机键鼠空闲 ≥ away_minutes 分钟才推（只在 Windows 上能读空闲时间，Linux/macOS 上等同 always）
+    // off    = 不推
+    "mode": "always",
+
+    // away 模式下，键鼠空闲多少分钟算「离开电脑」
+    "away_minutes": 5,
+
+    // ntfy 服务器地址；ntfy.sh 是公共服务，也可以填自建服务器
+    "server": "https://ntfy.sh",
+
+    // 订阅频道名，相当于密码：知道它的人都能看到推送，别外传
+    // 只能用字母、数字、- 和 _，最长 64 个字符（超长会 400 topic invalid）；手机 ntfy App 订阅同一个 topic
+    "topic": "cc-whr-ceQWbp2Q8dtpfC1PXkMHK8Ricy6jhqjnnYp82JBGRh",
+
+    // 访问令牌（自建服务器或开了鉴权的 topic 用），以 Authorization: Bearer 发送；留空 = 不鉴权
+    "token": "",
+
+    // 留空 = 先用 HTTPS_PROXY / HTTP_PROXY 环境变量，没有再用 Windows 系统代理（Linux 上没有系统代理可用）
+    // none = 直连；也可写代理地址，如 http://127.0.0.1:7890
+    "proxy": "",
+
+    // 「需要你处理」类推送（等授权、等输入、提问、计划待批、出错）的优先级，1 最低 ~ 5 最高
+    // 4 = high，Android 上会弹横幅
+    "priority": 4,
+
+    // 「已完成」类推送的优先级；3 = default，有声音和震动但不弹横幅
+    "priority_done": 3,
+
+    // true = 推送正文带上回复摘要 / 问题内容
+    // false = 只推标题和机器·项目，适合不想让内容经过公共服务器时
+    "detail": false,
+  },
+}

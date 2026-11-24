@@ -32,7 +32,93 @@
       "Bash(rm -rf /)"
     ]
   },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion|ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/cc_notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "awaySummaryEnabled": false,
+  "enableArtifact": false,
   "language": "chinese",
   "tui": "fullscreen",
   "showThinkingSummaries": true,
@@ -45,23 +131,127 @@
   "subagentPromptCacheTtl": "5m",
   "statusLine": {
     "type": "command",
-    "command": "bash \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"",
+    "command": "bash \"$HOME/.claude/statusline.sh\"",
     "padding": 0
   },
   "model": "claude-opus-5-5[1m]",
   "modelSettings": {
+    "claude-fable-5-2[1m]": {
+      "effortLevel": "xhigh"
+    },
+    "claude-fable-5-2": {
+      "effortLevel": "xhigh"
+    },
+    "claude-fable-5-1[1m]": {
+      "effortLevel": "xhigh"
+    },
     "claude-fable-5-1": {
+      "effortLevel": "xhigh"
+    },
+    "claude-opus-5-5[1m]": {
       "effortLevel": "xhigh"
     },
     "claude-opus-5-5": {
       "effortLevel": "xhigh"
     },
+    "claude-sonnet-5-5[1m]": {
+      "effortLevel": "medium"
+    },
     "claude-sonnet-5-5": {
       "effortLevel": "xhigh"
+    },
+    "claude-haiku-5-5[1m]": {
+      "effortLevel": "medium"
     }
   },
   "$remove": [
     "env.ANTHROPIC_MODEL",
-    "effortLevel"
+    "effortLevel",
+    {
+      "path": "hooks.UserPromptSubmit",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.Stop",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.StopFailure",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.Notification",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.PreToolUse",
+      "item": {
+        "matcher": "AskUserQuestion|ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.PostToolUse",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.SessionEnd",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$HOME/.claude/hooks/cc_notify.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    }
   ]
 }

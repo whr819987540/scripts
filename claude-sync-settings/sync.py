@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 """claude-sync：把远端共用的 Claude Code 用户级配置同步到本机。
 
-远端（公开仓库）放 shared-settings.json 和 statusline.sh，本机对应
-~/.claude/settings.json 和 ~/.claude/statusline.sh（设置了 CLAUDE_CONFIG_DIR 时用它）。
+远端（公开仓库）放 shared-settings.json、statusline.sh 和 hooks/ 下的通知 hook：
+  - shared-settings.json -> <配置目录>/settings.json（配置目录是 CLAUDE_CONFIG_DIR，未设置时是 ~/.claude）
+  - statusline.sh、hooks/* -> ~/.claude 下的同名路径。共享配置里的命令写的是
+    $HOME/.claude/...，所以这些文件不跟 CLAUDE_CONFIG_DIR 走
 
 比对规则：
   - 按完整路径比对（如 env.ANTHROPIC_MODEL）：本机缺的算「新增」，值不同算「修改」
@@ -41,8 +43,17 @@ SOURCES = [
 ]
 FALLBACK_TIMEOUT = 15  # GitHub 之外的来源给更宽的超时
 SHARED_SETTINGS = "shared-settings.json"
-# 远端文件名 -> 本机文件名（都相对于配置目录）
-SHARED_FILES = [("statusline.sh", "statusline.sh")]
+# 远端文件名 -> 本机文件名（相对于 ~/.claude，见 files_dir）
+SHARED_FILES = [
+    ("statusline.sh", "statusline.sh"),
+    ("hooks/cc_notify.sh", "hooks/cc_notify.sh"),
+    ("hooks/cc_notify.py", "hooks/cc_notify.py"),
+    ("hooks/cc_notify.json", "hooks/cc_notify.json"),
+    ("hooks/cc_notify_toast.ps1", "hooks/cc_notify_toast.ps1"),
+]
+# 写入时加 UTF-8 BOM 的后缀：Windows PowerShell 5.1 读没有 BOM 的脚本会按系统代码页解码，中文变乱码。
+# 读取两边时都去掉 BOM 再比较，所以 BOM 不会被当成差异
+BOM_SUFFIXES = (".ps1",)
 STATE_FILE = ".claude-sync-state.json"
 REMOVE_KEY = "$remove"  # 远端专用：列出要从本机删除的 key / 数组元素，不写进本机
 SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -54,6 +65,12 @@ MISSING = object()
 def config_dir():
     env = os.environ.get("CLAUDE_CONFIG_DIR")
     return Path(env).expanduser() if env else Path.home() / ".claude"
+
+
+def files_dir():
+    """SHARED_FILES 的本机目录。共享配置里的 statusLine / hooks 命令写死了 $HOME/.claude，
+    所以不跟 CLAUDE_CONFIG_DIR 走，否则同步过去的文件不会被用到。"""
+    return Path.home() / ".claude"
 
 
 def canon(value):
@@ -356,7 +373,7 @@ def diff_removals(local, remote, removals, out):
             out.append(Change("remove_item", path, item))
 
 
-def diff_files(base, timeout, cfg):
+def diff_files(base, timeout, dest):
     out = []
     for remote_name, local_name in SHARED_FILES:
         try:
@@ -364,10 +381,10 @@ def diff_files(base, timeout, cfg):
         except Exception as exc:
             print("拉取 %s 失败（%s），本次跳过这个文件" % (remote_name, why(exc)))
             continue
-        target = cfg / local_name
+        target = dest / local_name
         local = None
         if target.exists():
-            local = target.read_bytes().decode("utf-8", "replace").replace("\r\n", "\n")
+            local = target.read_bytes().decode("utf-8-sig", "replace").replace("\r\n", "\n")
             if local == text:
                 continue
         out.append(Change("file", local_name, text, local))
@@ -449,17 +466,20 @@ def main():
     cfg = config_dir()
     settings_path = cfg / "settings.json"
     state_path = cfg / STATE_FILE
+    files = files_dir()
 
     local = load_local(settings_path)
     base, timeout, remote = load_remote(args)
     print("本机：%s" % settings_path)
+    if files != cfg:
+        print("共享文件：%s（statusLine、hooks 的命令写的是 $HOME/.claude）" % files)
 
     removals = parse_removals(remote.pop(REMOVE_KEY, []))
     strict = ask("\n开启严格比对？本机有、共享配置没有的 key 和数组元素会逐项询问是否删除，%s 不生效 [y/n] > "
                  % REMOVE_KEY, ["y", "n"]) == "y"
     changes = []
     diff_settings(local, remote, [], changes)
-    changes += diff_files(base, timeout, cfg)
+    changes += diff_files(base, timeout, files)
     if strict:
         diff_extra(local, remote, [], changes)
     else:
@@ -505,9 +525,10 @@ def main():
             len(setting_changes), "（原文件备份为 %s）" % bak.name if bak else ""))
     for c in accepted:
         if c.kind == "file":
-            target = cfg / c.path
+            target = files / c.path
             bak = backup(target, stamp)
-            atomic_write(target, c.remote, mode=0o755 if target.suffix == ".sh" else None)
+            text = "\ufeff" + c.remote if target.suffix.lower() in BOM_SUFFIXES else c.remote
+            atomic_write(target, text, mode=0o755 if target.suffix == ".sh" else None)
             print("已更新 %s%s" % (c.path, "（原文件备份为 %s）" % bak.name if bak else ""))
     for c in accepted:
         ignored.pop(c.key, None)

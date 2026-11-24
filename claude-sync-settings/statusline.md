@@ -1,13 +1,13 @@
 # Claude Code 状态栏安装步骤
 
-`statusline.sh` 从标准输入读取 Claude Code 传入的状态 JSON，输出一行状态栏：模型（effort）、当前路径和 Git 分支、上下文用量、输出速度与缓存命中率、费用和订阅用量、最近一次请求的完成时间。解析 JSON 需要 Python 3，没有 Python 时退回用 `jq` 显示基本字段。
+`statusline.sh` 从标准输入读取 Claude Code 传入的状态 JSON，输出状态栏（终端太窄时折成两行，第二行超长部分用"…"截断）：模型（effort）、当前路径和 Git 分支、上下文用量、输出速度与缓存命中率、费用和订阅用量、最近一次请求的完成时间。解析 JSON 需要 Python 3，没有 Python 时退回用 `jq` 显示基本字段。
 
 通常由 [`sync.py`](sync.md) 一并同步，下面是手动安装的步骤。
 
-1. 下载脚本到 Claude Code 配置目录。
+1. 下载脚本到 `~/.claude`。设置了 `CLAUDE_CONFIG_DIR` 也放这里，因为下一步的命令写的是 `$HOME/.claude`。
 
    ```bash
-   claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+   claude_dir="$HOME/.claude"
    mkdir -p "$claude_dir"
    curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/claude-sync-settings/statusline.sh \
        -o "$claude_dir/statusline.sh"
@@ -18,12 +18,12 @@
    ```json
    "statusLine": {
      "type": "command",
-     "command": "bash \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"",
+     "command": "bash \"$HOME/.claude/statusline.sh\"",
      "padding": 0
    }
    ```
 
-3. 用一份示例 JSON 测试输出，应看到带颜色的一行状态栏。
+3. 用一份示例 JSON 测试输出，应看到带颜色的状态栏；终端较窄时会折成两行。
 
    ```bash
    printf '{"model":{"display_name":"Opus 5.5 (1M context)"},"effort":{"level":"xhigh"},"workspace":{"current_dir":"%s"},"context_window":{"total_input_tokens":12000,"context_window_size":1000000}}' "$PWD" |

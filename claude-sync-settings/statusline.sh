@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code status line: model(effort) | cwd (branch) | ctx in+out/max | decode speed / cache hit (current/session)
-# Reads the status-line JSON payload from stdin and prints one formatted line.
+# Reads the status-line JSON payload from stdin and prints one formatted line, or two
+# when the terminal is too narrow (the second one cut with "…"); see "layout" below.
 #
 # Portability note (Windows/Git-Bash): jq is usually absent and `python3` resolves
 # to the WindowsApps stub, which exits non-zero without output. So we resolve a
@@ -304,15 +305,15 @@ hit_cur_str="${_f[3]:-n/a}"
 decode_str="${_f[4]:-n/a}"
 hit_session_str="${_f[5]:-n/a}"
 
-# ---- colors (dim-friendly ANSI 256) ----
-C_RESET="\033[0m"
-C_MODEL="\033[38;5;110m"
-C_PATH="\033[38;5;108m"
-C_BRANCH="\033[38;5;180m"
-C_CTX="\033[38;5;146m"
-C_PERF="\033[38;5;244m"
-C_TIME="\033[38;5;103m"
-C_WARN="\033[38;5;173m"
+# ---- colors (dim-friendly ANSI 256; real ESC bytes, printed with %s) ----
+C_RESET=$'\033[0m'
+C_MODEL=$'\033[38;5;110m'
+C_PATH=$'\033[38;5;108m'
+C_BRANCH=$'\033[38;5;180m'
+C_CTX=$'\033[38;5;146m'
+C_PERF=$'\033[38;5;244m'
+C_TIME=$'\033[38;5;103m'
+C_WARN=$'\033[38;5;173m'
 
 # ---- git branch + dirty flag (skip optional locks; only if inside a repo) ----
 # Uses the raw cwd from the payload, not the ~-abbreviated display form.
@@ -333,35 +334,195 @@ fi
 # detached HEAD: keep the old behavior of showing no branch
 [ "$branch" = "(detached)" ] && branch=""
 
-perf_seg="decode:${decode_str} hit:${hit_cur_str}/${hit_session_str}"
 # no wall-clock fallback: a refresh must never move this time
 req_time="${_f[7]}"
 [ -n "$req_time" ] || req_time="--:--:--"
 req_flag="${_f[8]}"
 
+# ---- segments, in display order ----
+# Plain text + color per piece, joined by single spaces. glue=1 keeps a piece on
+# the same line as the one before it (branch after path, flag after time); the
+# layout below may wrap between any other two pieces.
+P_TEXT=() P_COLOR=() P_GLUE=()
+add_piece() { P_TEXT+=("$1"); P_COLOR+=("$2"); P_GLUE+=("${3:-0}"); }
+
+add_piece "$model_seg" "$C_MODEL"
+add_piece "$disp_path" "$C_PATH"
+[ -n "$branch" ] && add_piece "(${branch}${dirty})" "$C_BRANCH" 1
+add_piece "ctx:${ctx_seg}" "$C_CTX"
+add_piece "decode:${decode_str}" "$C_PERF"
+add_piece "hit:${hit_cur_str}/${hit_session_str}" "$C_PERF"
 # cost, then 5h / 7d subscription usage as "5h:16%→21:00"; a window at 80%+ turns
-# the warning color. Holds raw escape codes, so it is printed with %b.
-usage_seg=""
-[ -n "${_f[9]}" ] && usage_seg=" ${C_PERF}cost:${_f[9]}${C_RESET}"
+# the warning color.
+[ -n "${_f[9]}" ] && add_piece "cost:${_f[9]}" "$C_PERF"
 win_names=(5h 7d)
 for i in 0 1; do
   name="${win_names[i]}" pct="${_f[10 + 2 * i]}" reset="${_f[11 + 2 * i]}"
   if [ "$reset" = "已重置" ]; then
-    usage_seg+=" ${C_PERF}${name}:已重置${C_RESET}"
+    add_piece "${name}:已重置" "$C_PERF"
     continue
   fi
   [ -n "$pct" ] || continue
   if [ "$pct" -ge 80 ]; then c="$C_WARN"; else c="$C_PERF"; fi
-  usage_seg+=" ${c}${name}:${pct}%${reset:+→$reset}${C_RESET}"
+  add_piece "${name}:${pct}%${reset:+→$reset}" "$c"
 done
+add_piece "$req_time" "$C_TIME"
+[ -n "$req_flag" ] && add_piece "$req_flag" "$C_WARN" 1
 
-# ---- assemble the status line ----
-printf "${C_MODEL}%s${C_RESET} ${C_PATH}%s${C_RESET}" "$model_seg" "$disp_path"
-if [ -n "$branch" ]; then
-  printf " ${C_BRANCH}(%s%s)${C_RESET}" "$branch" "$dirty"
+# ---- layout: at most two lines, the second one cut with "…" ----
+# Claude Code cuts each status line at the footer width without wrapping. That
+# width is $COLUMNS (Claude Code sets it for the command) minus the footer's side
+# padding (2 columns per side in the default layout, 0 in some fullscreen ones)
+# and minus the statusLine "padding" setting (per side). STATUSLINE_RESERVE is
+# that total: 4 + 2 * padding; set it to 0 if the line sits flush against the
+# left edge of the terminal.
+STATUSLINE_RESERVE="${STATUSLINE_RESERVE:-4}"
+
+# Widths need a UTF-8 locale (so ${#s} counts characters, not bytes); bash
+# switches locale the moment LC_ALL is assigned.
+utf8=0
+for loc in C.UTF-8 en_US.UTF-8; do
+  LC_ALL="$loc"
+  t="中"
+  if [ "${#t}" -eq 1 ]; then utf8=1; break; fi
+done 2>/dev/null
+
+# Terminal columns of one character -> CW: 2 for East Asian wide / fullwidth,
+# 0 for combining marks and zero-width joiners/selectors, 1 otherwise (ambiguous
+# ones such as → and … count as 1, the same way Claude Code measures them).
+ch_w() {
+  local cp
+  printf -v cp '%d' "'$1"
+  if (( (cp >= 0x300 && cp <= 0x36F) || (cp >= 0x200B && cp <= 0x200F) || (cp >= 0xFE00 && cp <= 0xFE0F) )); then
+    CW=0
+  elif (( (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0x303E) || (cp >= 0x3041 && cp <= 0x33FF)
+       || (cp >= 0x3400 && cp <= 0x4DBF) || (cp >= 0x4E00 && cp <= 0x9FFF) || (cp >= 0xA000 && cp <= 0xA4CF)
+       || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFE30 && cp <= 0xFE4F)
+       || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6) || (cp >= 0x1F300 && cp <= 0x1F64F)
+       || (cp >= 0x1F900 && cp <= 0x1F9FF) || (cp >= 0x20000 && cp <= 0x3FFFD) )); then
+    CW=2
+  else
+    CW=1
+  fi
+}
+
+# Display width of $1 -> DW. Globals, not $(...): every fork costs on Git Bash.
+dw() {
+  local s="$1" i n=0
+  if [[ "$s" != *[![:ascii:]]* ]]; then DW=${#s}; return; fi
+  for ((i = 0; i < ${#s}; i++)); do ch_w "${s:i:1}"; ((n += CW)); done
+  DW=$n
+}
+
+# Longest prefix of $1 that fits in $2 columns -> CUT_HEAD, the rest -> CUT_REST.
+cut_w() {
+  local s="$1" max="$2" i n=0
+  if [[ "$s" != *[![:ascii:]]* ]]; then CUT_HEAD="${s:0:max}" CUT_REST="${s:max}"; return; fi
+  for ((i = 0; i < ${#s}; i++)); do
+    ch_w "${s:i:1}"
+    if (( n + CW > max )); then break; fi
+    ((n += CW))
+  done
+  CUT_HEAD="${s:0:i}" CUT_REST="${s:i}"
+}
+
+n=${#P_TEXT[@]}
+W=$(( ${COLUMNS:-0} - STATUSLINE_RESERVE ))
+out1="" out2=""
+
+if [ "$utf8" -ne 1 ] || [ "$W" -lt 20 ]; then
+  # width unknown (or absurdly small): one line, as before; Claude Code cuts it
+  for ((k = 0; k < n; k++)); do
+    (( k > 0 )) && out1+=" "
+    out1+="${P_COLOR[k]}${P_TEXT[k]}${C_RESET}"
+  done
+else
+  P_W=()
+  for ((k = 0; k < n; k++)); do dw "${P_TEXT[k]}"; P_W[k]=$DW; done
+
+  # Line 1: whole units (a piece plus the pieces glued to it) while they fit.
+  # Everything after goes to line 2 as a flat list L2_* (space-joined).
+  L2_TEXT=() L2_COLOR=()
+  used=0 k=0
+  while (( k < n )); do
+    j=$((k + 1)) uw=${P_W[k]}
+    while (( j < n && P_GLUE[j] == 1 )); do ((uw += 1 + P_W[j], j++)); done
+    sep=$(( used > 0 ? 1 : 0 ))
+    if (( used + sep + uw <= W )); then
+      for ((m = k; m < j; m++)); do
+        (( m > k || used > 0 )) && out1+=" "
+        out1+="${P_COLOR[m]}${P_TEXT[m]}${C_RESET}"
+      done
+      ((used += sep + uw))
+      k=$j
+      continue
+    fi
+    # fits on a line of its own: line 2 starts with it
+    (( uw <= W )) && break
+    # Wider than a whole line, so the glue has to give: place its pieces one by
+    # one, wrap at the first piece that does not fit, and cut a piece mid-text
+    # only when that piece alone is wider than a line.
+    for ((m = k; m < j; m++)); do
+      sep=$(( used > 0 ? 1 : 0 ))
+      if (( used + sep + P_W[m] <= W )); then
+        (( sep )) && out1+=" "
+        out1+="${P_COLOR[m]}${P_TEXT[m]}${C_RESET}"
+        ((used += sep + P_W[m]))
+        continue
+      fi
+      if (( P_W[m] <= W )); then
+        for ((; m < j; m++)); do L2_TEXT+=("${P_TEXT[m]}") L2_COLOR+=("${P_COLOR[m]}"); done
+        break
+      fi
+      room=$(( W - used - sep ))
+      if (( room > 0 )); then
+        cut_w "${P_TEXT[m]}" "$room"
+        (( sep )) && out1+=" "
+        out1+="${P_COLOR[m]}${CUT_HEAD}${C_RESET}"
+        L2_TEXT+=("$CUT_REST") L2_COLOR+=("${P_COLOR[m]}")
+      else
+        L2_TEXT+=("${P_TEXT[m]}") L2_COLOR+=("${P_COLOR[m]}")
+      fi
+      for ((m++; m < j; m++)); do L2_TEXT+=("${P_TEXT[m]}") L2_COLOR+=("${P_COLOR[m]}"); done
+      break
+    done
+    k=$j
+    break
+  done
+  for ((; k < n; k++)); do L2_TEXT+=("${P_TEXT[k]}") L2_COLOR+=("${P_COLOR[k]}"); done
+
+  # Line 2: everything left if it fits, else cut so that "…" ends the line.
+  n2=${#L2_TEXT[@]}
+  if (( n2 > 0 )); then
+    L2_W=() total=0
+    for ((m = 0; m < n2; m++)); do
+      dw "${L2_TEXT[m]}"; L2_W[m]=$DW
+      ((total += (m > 0 ? 1 : 0) + DW))
+    done
+    budget=$W
+    (( total > W )) && budget=$((W - 1))
+    used=0
+    for ((m = 0; m < n2; m++)); do
+      sep=$(( m > 0 ? 1 : 0 ))
+      if (( used + sep + L2_W[m] <= budget )); then
+        (( sep )) && out2+=" "
+        out2+="${L2_COLOR[m]}${L2_TEXT[m]}${C_RESET}"
+        ((used += sep + L2_W[m]))
+        continue
+      fi
+      room=$(( budget - used - sep ))
+      if (( room > 0 )); then
+        cut_w "${L2_TEXT[m]}" "$room"
+        (( sep )) && out2+=" "
+        out2+="${L2_COLOR[m]}${CUT_HEAD}…${C_RESET}"
+      else
+        out2+="${L2_COLOR[m]}…${C_RESET}"
+      fi
+      break
+    done
+  fi
 fi
-printf " ${C_CTX}ctx:%s${C_RESET} ${C_PERF}%s${C_RESET}%b ${C_TIME}%s${C_RESET}" "$ctx_seg" "$perf_seg" "$usage_seg" "$req_time"
-if [ -n "$req_flag" ]; then
-  printf " ${C_WARN}%s${C_RESET}" "$req_flag"
-fi
-printf "\n"
+
+printf '%s' "$out1"
+[ -n "$out2" ] && printf '\n%s' "$out2"
+printf '\n'

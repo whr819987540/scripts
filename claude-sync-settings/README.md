@@ -6,8 +6,11 @@
 |---|---|
 | `shared-settings.json` | `~/.claude/settings.json` |
 | `statusline.sh` | `~/.claude/statusline.sh` |
+| `hooks/cc_notify.sh`、`cc_notify.py`、`cc_notify.json`、`cc_notify_toast.ps1` | `~/.claude/hooks/` 下同名文件（通知 hook，见 [`hooks/cc_notify.md`](hooks/cc_notify.md)） |
 
-设置了 `CLAUDE_CONFIG_DIR` 时，本机目录以它为准。
+设置了 `CLAUDE_CONFIG_DIR` 时，`settings.json` 写到它下面。`statusline.sh` 和 `hooks/` 总是写到 `~/.claude`，因为共享配置里 `statusLine` 和 `hooks` 的命令写的就是 `$HOME/.claude/...`。
+
+本机 `settings.json` 里独有的项默认保留，比如只在这台机器上用的代理 `env.HTTPS_PROXY`、`env.NODE_EXTRA_CA_CERTS`；只有开启严格比对时才会逐项询问是否删除，选 `[i]` 以后就不再问。
 
 ## 同步
 
@@ -71,8 +74,9 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 - **数组**（比如 `permissions.deny`）：只补本机缺少的元素。
 - **默认不删除**：本机独有的 key 和数组元素都保留。只有远端在 `$remove` 里列出的才会提示「删除」，而且删除项总是逐项确认，选 `[a]` 也不会替你删。
 - **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问；删除项太多时选 `[s]` 跳过剩下的。
-- **写入前自动备份**，备份名为 `settings.json.bak-sync-<时间>`，状态栏脚本同理。
-- **忽略记录**存在 `~/.claude/.claude-sync-state.json`。远端的值变了会重新询问；想马上重新询问，加 `--all`。
+- **写入前自动备份**，备份名为 `settings.json.bak-sync-<时间>`，`statusline.sh` 和 `hooks/` 下的文件同理。
+- **文件整份比对**：`statusline.sh` 和 `hooks/` 下的文件不按 key 合并，内容不同就整份替换。`hooks/cc_notify.json` 改过本机专属的设置时，选 `[i]` 忽略。`.ps1` 写入时保留 UTF-8 BOM，因为 Windows PowerShell 5.1 读不带 BOM 的脚本会把中文读成乱码。
+- **忽略记录**存在 `settings.json` 所在目录的 `.claude-sync-state.json`。远端的值变了会重新询问；想马上重新询问，加 `--all`。
 
 ## 参数
 
@@ -88,7 +92,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 
 ## 维护远端
 
-编辑本目录下的 `shared-settings.json` 或 `statusline.sh`，然后在 scripts 仓库里：
+编辑本目录下的 `shared-settings.json`、`statusline.sh` 或 `hooks/` 下的文件，然后在 scripts 仓库里：
 
 ```bash
 git commit -am "更新共用配置" && git push

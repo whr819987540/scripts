@@ -23,7 +23,7 @@
 | `gpu-interconnect-benchmark/` | `gpu-interconnect-benchmark` | GPU 互联带宽与 NCCL 测试 |
 | `network-speed/` | `network-speed` | 监控网卡速度 |
 | `container-mem/` | `container-mem` | 分析容器内存占用 |
-| `claude-sync-settings/` | `claude-sync` | 多机同步 Claude Code 用户级配置和状态栏（原 claude-sync-settings 仓库） |
+| `claude-sync-settings/` | `claude-sync` | 多机同步 Claude Code 用户级配置、状态栏和通知 hook（含 `hooks/`；原 claude-sync-settings 仓库） |
 | `python-utils/` | — | Python 日志初始化等工具函数 |
 
 根目录只保留统一入口 `run.sh` 及其文档 `run.md`。
@@ -125,7 +125,7 @@ source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) network-s
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) container-mem
 ```
 
-把共享的 Claude Code 配置和状态栏同步到本机（每处改动都会先确认，需要 Python 3.8+；`--dry-run` 只看差异）：
+把共享的 Claude Code 配置、状态栏和通知 hook 同步到本机（每处改动都会先确认，需要 Python 3.8+；`--dry-run` 只看差异）：
 
 ```bash
 source <(curl -fsSL https://gitee.com/hit_whr/scripts/raw/main/run.sh) claude-sync
