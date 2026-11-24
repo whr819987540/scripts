@@ -1,6 +1,6 @@
 # Claude Code 配置同步步骤
 
-`sync.py` 读取本目录的 `shared-settings.json`、`statusline.sh` 和 `hooks/` 下的通知 hook，与本机 `settings.json`、`~/.claude/statusline.sh`、`~/.claude/hooks/` 比对，逐项确认后写入（写入前自动备份）。本机 `settings.json` 独有的项（比如代理 `env`）默认保留。需要 Python 3.8+，比对规则见 [`README.md`](README.md)。
+`sync.py` 读取本目录的 `shared-settings.json`、`statusline.sh` 和 `hooks/` 下的通知 hook，与本机 `settings.json`、`~/.claude/statusline.sh`、`~/.claude/hooks/` 比对，逐项确认后写入（写入前自动备份）。共享配置 `$keep` 里列出的项（`rec` 写进 `env` 的代理和 CA 证书）任何模式下都不动，其他本机独有的项默认也保留。需要 Python 3.8+，比对规则见 [`README.md`](README.md)。
 
 1. 确认要同步哪个配置目录。脚本开始比对前会列出候选：`~/.claude`（直接运行 `claude` 时用）、`rec` 的各个账号、`CLAUDE_CONFIG_DIR`，让你选一个，每次只改一个。`rec` 只给它启动的 `claude` 进程设置 `CLAUDE_CONFIG_DIR`，终端里通常看不到，可以先列出本机有哪些目录：
 

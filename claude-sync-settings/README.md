@@ -18,7 +18,7 @@
 
 `statusline.sh` 和 `hooks/` 不管选哪个目录，总是写到 `~/.claude`，因为共享配置里 `statusLine` 和 `hooks` 的命令写的就是 `$HOME/.claude/...`。
 
-本机 `settings.json` 里独有的项默认保留，比如只在这台机器上用的代理 `env.HTTPS_PROXY`、`env.NODE_EXTRA_CA_CERTS`；只有开启严格比对时才会逐项询问是否删除，选 `[i]` 以后就不再问。
+`rec` 写进 `env` 的代理和 CA 证书（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` 及其小写形式，`NODE_EXTRA_CA_CERTS`）是每台机器各自的，列在共享配置的 `$keep` 里：同步时不新增、不修改、不删除，严格比对也不会列出。其他本机独有的项默认也保留，只有开启严格比对时才会逐项询问是否删除。
 
 ## 同步
 
@@ -86,7 +86,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 - **每一处新增、修改、删除都要你确认**才会写入。
 - **数组**（比如 `permissions.deny`）：只补本机缺少的元素。
 - **默认不删除**：本机独有的 key 和数组元素都保留。只有远端在 `$remove` 里列出的才会提示「删除」，而且删除项总是逐项确认，选 `[a]` 也不会替你删。
-- **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问；删除项太多时选 `[s]` 跳过剩下的。
+- **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效，`$keep` 仍然生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问；删除项太多时选 `[s]` 跳过剩下的。
 - **写入前自动备份**，备份名为 `settings.json.bak-sync-<时间>`，`statusline.sh` 和 `hooks/` 下的文件同理。
 - **文件整份比对**：`statusline.sh` 和 `hooks/` 下的文件不按 key 合并，内容不同就整份替换。`hooks/cc_notify.json` 改过本机专属的设置时，选 `[i]` 忽略。`.ps1` 写入时保留 UTF-8 BOM，因为 Windows PowerShell 5.1 读不带 BOM 的脚本会把中文读成乱码。
 - **忽略记录**存在 `settings.json` 所在目录的 `.claude-sync-state.json`。远端的值变了会重新询问；想马上重新询问，加 `--all`。
@@ -117,6 +117,18 @@ git commit -am "更新共用配置" && git push
 本目录原来是独立仓库 `whr819987540/claude-sync-settings`，已连同提交历史并入 scripts 仓库；`sync.py` 现在从 scripts 仓库的 `claude-sync-settings/` 目录读取共享配置，只维护这里即可。
 
 scripts 仓库是公开的，不要往里放 token、密码这类机密。另外，只放每台机器都通用的项：项目专属或机器专属的配置（比如 `autoMode.environment`）不要放进来。
+
+### 让各机器保留某一项
+
+机器专属、同步时一律不能碰的 key，列在顶层的 `$keep` 里：
+
+```json
+"$keep": ["env.HTTPS_PROXY", "env.NODE_EXTRA_CA_CERTS"]
+```
+
+- 每条是点分路径，key 本身含 `.` 时写成数组，同 `$remove`。
+- 列出的 key 及其下级在任何模式下都不新增、不修改、不删除；删除或整体替换它的上级时，只要本机的上级里有这个 key，也会跳过。被跳过的项会在列差异之前打印出来。
+- `$keep` 只给同步脚本看，不会写进本机 `settings.json`。
 
 ### 让各机器删掉某一项
 

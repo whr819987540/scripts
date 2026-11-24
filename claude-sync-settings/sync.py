@@ -13,6 +13,7 @@
   - 按完整路径比对（如 env.ANTHROPIC_MODEL）：本机缺的算「新增」，值不同算「修改」
   - 数组只补本机缺少的元素；本机独有的 key 和数组元素不删除，除非远端在 $remove 里列出
   - 严格比对（运行时询问是否开启）：本机有、共享配置没有的 key 和数组元素都列为删除，此时 $remove 不生效
+  - 远端 $keep 列出的 key（比如 rec 写进 env 的代理和 CA 证书）在任何模式下都不新增、不修改、不删除
   - 每一处新增、修改、删除都先列出来，经你确认后才写入，写入前自动备份；删除总是逐项确认
   - 选了「忽略」的项记在 <配置目录>/.claude-sync-state.json，远端值不变就不再询问
 
@@ -58,6 +59,7 @@ SHARED_FILES = [
 BOM_SUFFIXES = (".ps1",)
 STATE_FILE = ".claude-sync-state.json"
 REMOVE_KEY = "$remove"  # 远端专用：列出要从本机删除的 key / 数组元素，不写进本机
+KEEP_KEY = "$keep"  # 远端专用：列出本机永远不动的 key（机器专属的代理等），严格比对也不删，不写进本机
 SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
 MISSING = object()
 
@@ -444,6 +446,32 @@ def parse_removals(spec):
     return out
 
 
+def parse_keeps(spec):
+    """把远端的 $keep 规范成路径列表。每条是点分路径 "env.HTTPS_PROXY"；key 本身含点时写成数组。"""
+    out = []
+    for entry in spec if isinstance(spec, list) else [spec]:
+        path = entry.split(".") if isinstance(entry, str) else entry
+        if not (isinstance(path, list) and path and all(isinstance(k, str) and k for k in path)):
+            print("跳过无法识别的 %s 条目：%s" % (KEEP_KEY, short(entry)))
+            continue
+        out.append(path)
+    return out
+
+
+def touches_kept(change, keeps):
+    """这处改动会不会动到 $keep 列出的 key：改动落在它上面或下面；或者删除、整体替换它的上级，
+    而本机的上级里正好有它。"""
+    if change.kind == "file":
+        return False
+    p = change.path
+    for k in keeps:
+        if p[:len(k)] == k:
+            return True
+        if change.kind in ("remove", "modify") and k[:len(p)] == p and lookup(change.local, k[len(p):]) is not MISSING:
+            return True
+    return False
+
+
 def diff_removals(local, remote, removals, out):
     for path, item in removals:
         lv, rv = lookup(local, path), lookup(remote, path)
@@ -565,6 +593,7 @@ def main():
         print("共享文件：%s（statusLine、hooks 的命令写的是 $HOME/.claude）" % files)
 
     removals = parse_removals(remote.pop(REMOVE_KEY, []))
+    keeps = parse_keeps(remote.pop(KEEP_KEY, []))
     strict = ask("\n开启严格比对？本机有、共享配置没有的 key 和数组元素会逐项询问是否删除，%s 不生效 [y/n] > "
                  % REMOVE_KEY, ["y", "n"]) == "y"
     changes = []
@@ -574,6 +603,11 @@ def main():
         diff_extra(local, remote, [], changes)
     else:
         diff_removals(local, remote, removals, changes)
+    kept = [c for c in changes if touches_kept(c, keeps)]
+    if kept:
+        changes = [c for c in changes if c not in kept]
+        print("按 %s 保留本机的 %d 项，不做改动：%s"
+              % (KEEP_KEY, len(kept), "、".join(fmt_path(c.path) for c in kept)))
 
     state = load_state(state_path)
     ignored = state["ignored"]

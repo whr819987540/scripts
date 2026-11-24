@@ -164,6 +164,15 @@
       "effortLevel": "medium"
     }
   },
+  "$keep": [
+    "env.HTTPS_PROXY",
+    "env.HTTP_PROXY",
+    "env.NO_PROXY",
+    "env.https_proxy",
+    "env.http_proxy",
+    "env.no_proxy",
+    "env.NODE_EXTRA_CA_CERTS"
+  ],
   "$remove": [
     "env.ANTHROPIC_MODEL",
     "effortLevel",
