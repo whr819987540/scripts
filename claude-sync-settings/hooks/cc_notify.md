@@ -21,7 +21,7 @@
    done
    ```
 
-2. 按需修改 `cc_notify.json`。`ntfy.topic` 相当于订阅密码，仓库里这份是公开的；`ntfy.detail` 为 `false` 时，推送只带标题和「机器 · 项目」，不带回复内容。只想在这台机器上改的话，下次同步时对这个文件选 `[i]` 忽略。
+2. 在本机的 `cc_notify.json` 里填 `ntfy.topic`，手机 ntfy App 订阅同一个 topic。topic 相当于订阅密码，仓库是公开的，所以仓库里这份留空，`topic` 为空时手机推送关闭。填好后，同步时对 `hooks/cc_notify.json` 选 `[i]` 忽略，否则会被换回空 topic 的仓库版本；仓库里这个文件以后再有改动，还会再问一次。
 
    ```bash
    "${EDITOR:-vi}" "$HOME/.claude/hooks/cc_notify.json"

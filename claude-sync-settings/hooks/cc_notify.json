@@ -50,7 +50,8 @@
 
     // 订阅频道名，相当于密码：知道它的人都能看到推送，别外传
     // 只能用字母、数字、- 和 _，最长 64 个字符（超长会 400 topic invalid）；手机 ntfy App 订阅同一个 topic
-    "topic": "cc-whr-ceQWbp2Q8dtpfC1PXkMHK8Ricy6jhqjnnYp82JBGRh",
+    // 仓库是公开的，这里留空；在各台机器的 ~/.claude/hooks/cc_notify.json 里填
+    "topic": "",
 
     // 访问令牌（自建服务器或开了鉴权的 topic 用），以 Authorization: Bearer 发送；留空 = 不鉴权
     "token": "",
