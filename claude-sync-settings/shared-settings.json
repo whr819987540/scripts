@@ -261,6 +261,92 @@
           }
         ]
       }
+    },
+    {
+      "path": "hooks.UserPromptSubmit",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.Stop",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.StopFailure",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.Notification",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.PreToolUse",
+      "item": {
+        "matcher": "AskUserQuestion|ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.PostToolUse",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    },
+    {
+      "path": "hooks.SessionEnd",
+      "item": {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/cc_notify_remote.py\"",
+            "timeout": 10
+          }
+        ]
+      }
     }
   ]
 }

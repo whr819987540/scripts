@@ -4,10 +4,11 @@
 
 | 文件 | 作用 |
 |---|---|
-| `cc_notify.sh` | hook 入口。有的机器只有 `python3`，有的只有 `python`，Windows 上还可能是 WindowsApps 里的占位程序，所以由它按 `python3`、`python`、`py` 的顺序挑第一个不在 WindowsApps 里的解释器，再运行 `cc_notify.py` |
+| `cc_notify.sh` | hook 入口，所有机器的 hook 命令都是它。先选脚本：不是 Windows、且同目录有 `cc_notify_remote.py` 时，hook 事件交给 `cc_notify_remote.py`，否则交给 `cc_notify.py`；带参数的调用（`phone ...`）总是交给 `cc_notify.py`。再选 Python：有的机器只有 `python3`，有的只有 `python`，Windows 上还可能是 WindowsApps 里的占位程序，所以按 `python3`、`python`、`py` 的顺序挑第一个不在 WindowsApps 里的解释器 |
 | `cc_notify.py` | 通知逻辑 |
-| `cc_notify.json` | 各渠道的开关（JSONC，可以写注释）；缺少的键用 `cc_notify.py` 里的 `DEFAULTS` |
+| `cc_notify.json` | 各渠道的开关（JSONC，可以写注释）；缺少的键用 `cc_notify.py` 里的 `DEFAULTS`。同步时只在本机没有时创建，已有就不动 |
 | `cc_notify_toast.ps1` | Windows toast 子进程，见 [`cc_notify_toast.md`](cc_notify_toast.md) |
+| `cc_notify_remote.py` | 不在仓库里，只放在经 ssh 把通知交给 Windows 中继的机器（如 Ubuntu）上。它复用同目录的 `cc_notify.py`，只把 toast 和 ntfy 改为写 `~/.cc/notify/events.jsonl`，由 Windows 上的中继读取后弹出。有没有这个文件，决定了 `cc_notify.sh` 在这台机器上跑哪个脚本 |
 
 通常由 [`sync.py`](../sync.md) 把这四个文件一并同步到 `~/.claude/hooks/`，`hooks` 配置也在 [`shared-settings.json`](../shared-settings.json) 里。下面是手动安装的步骤。
 
@@ -15,13 +16,17 @@
 
    ```bash
    mkdir -p "$HOME/.claude/hooks"
-   for f in cc_notify.sh cc_notify.py cc_notify.json cc_notify_toast.ps1; do
-       curl -fsSL "https://gitee.com/hit_whr/scripts/raw/main/claude-sync-settings/hooks/$f" \
-           -o "$HOME/.claude/hooks/$f"
+   base=https://gitee.com/hit_whr/scripts/raw/main/claude-sync-settings/hooks
+   for f in cc_notify.sh cc_notify.py cc_notify_toast.ps1; do
+       curl -fsSL "$base/$f" -o "$HOME/.claude/hooks/$f"
    done
+   # cc_notify.json 只在没有时下载，不覆盖本机已填的 topic
+   [ -f "$HOME/.claude/hooks/cc_notify.json" ] || curl -fsSL "$base/cc_notify.json" -o "$HOME/.claude/hooks/cc_notify.json"
    ```
 
-2. 在本机的 `cc_notify.json` 里填 `ntfy.topic`，手机 ntfy App 订阅同一个 topic。topic 相当于订阅密码，仓库是公开的，所以仓库里这份留空，`topic` 为空时手机推送关闭。填好后，同步时对 `hooks/cc_notify.json` 选 `[i]` 忽略，否则会被换回空 topic 的仓库版本；仓库里这个文件以后再有改动，还会再问一次。
+   经 ssh 把通知交给 Windows 中继的机器（如 Ubuntu），还要把 `cc_notify_remote.py` 放进同一目录；仓库里没有这个文件。
+
+2. 在本机的 `cc_notify.json` 里填 `ntfy.topic`，手机 ntfy App 订阅同一个 topic。topic 相当于订阅密码，仓库是公开的，所以仓库里这份留空，`topic` 为空时手机推送关闭。同步只在本机没有 `cc_notify.json` 时才创建它，填好的 topic 以后不会被盖掉。
 
    ```bash
    "${EDITOR:-vi}" "$HOME/.claude/hooks/cc_notify.json"

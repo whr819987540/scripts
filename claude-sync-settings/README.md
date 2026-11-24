@@ -6,7 +6,7 @@
 |---|---|
 | `shared-settings.json` | 你选定的配置目录下的 `settings.json` |
 | `statusline.sh` | `~/.claude/statusline.sh` |
-| `hooks/cc_notify.sh`、`cc_notify.py`、`cc_notify.json`、`cc_notify_toast.ps1` | `~/.claude/hooks/` 下同名文件（通知 hook，见 [`hooks/cc_notify.md`](hooks/cc_notify.md)） |
+| `hooks/cc_notify.sh`、`cc_notify.py`、`cc_notify.json`、`cc_notify_toast.ps1` | `~/.claude/hooks/` 下同名文件（通知 hook，见 [`hooks/cc_notify.md`](hooks/cc_notify.md)）；`cc_notify.json` 只在本机没有时创建 |
 
 开始比对前，脚本列出本机的配置目录让你选一个，每次只改一个：
 
@@ -88,7 +88,7 @@ $f="$env:TEMP\claude-sync.py"; try { iwr https://raw.githubusercontent.com/whr81
 - **默认不删除**：本机独有的 key 和数组元素都保留。只有远端在 `$remove` 里列出的才会提示「删除」，而且删除项总是逐项确认，选 `[a]` 也不会替你删。
 - **严格比对**：每次运行先问是否开启。开启后，本机有、共享配置没有的 key 和数组元素全部列为「删除」，逐项确认；两边都是对象时逐层往下比，两边都是数组时逐个元素比。这时 `$remove` 不生效，`$keep` 仍然生效。新增、修改、文件的比对不受影响。机器专属的项（比如 `autoMode`、`permissions.allow`）可以选 `[i]` 忽略，以后不再问；删除项太多时选 `[s]` 跳过剩下的。
 - **写入前自动备份**，备份名为 `settings.json.bak-sync-<时间>`，`statusline.sh` 和 `hooks/` 下的文件同理。
-- **文件整份比对**：`statusline.sh` 和 `hooks/` 下的文件不按 key 合并，内容不同就整份替换。`hooks/cc_notify.json` 改过本机专属的设置时，选 `[i]` 忽略。`.ps1` 写入时保留 UTF-8 BOM，因为 Windows PowerShell 5.1 读不带 BOM 的脚本会把中文读成乱码。
+- **文件整份比对**：`statusline.sh` 和 `hooks/` 下的文件不按 key 合并，内容不同就整份替换。例外是 `hooks/cc_notify.json`：只在本机没有时创建，已有就不比对，各机器自己填的 ntfy topic 等设置不会被盖掉。`.ps1` 写入时保留 UTF-8 BOM，因为 Windows PowerShell 5.1 读不带 BOM 的脚本会把中文读成乱码。
 - **忽略记录**存在 `settings.json` 所在目录的 `.claude-sync-state.json`。远端的值变了会重新询问；想马上重新询问，加 `--all`。
 
 ## 参数

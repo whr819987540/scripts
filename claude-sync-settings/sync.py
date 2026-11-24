@@ -7,7 +7,7 @@
     ~/.claude、rec 的各个账号（~/.rec/claude/accounts/*/config）和 CLAUDE_CONFIG_DIR；
     直接回车选 CLAUDE_CONFIG_DIR，未设置时选 ~/.claude。--config-dir 可以跳过选择
   - statusline.sh、hooks/* -> ~/.claude 下的同名路径。共享配置里的命令写的是
-    $HOME/.claude/...，所以这些文件不跟 CLAUDE_CONFIG_DIR 走
+    $HOME/.claude/...，所以这些文件不跟 CLAUDE_CONFIG_DIR 走。hooks/cc_notify.json 只在本机没有时创建
 
 比对规则：
   - 按完整路径比对（如 env.ANTHROPIC_MODEL）：本机缺的算「新增」，值不同算「修改」
@@ -54,6 +54,8 @@ SHARED_FILES = [
     ("hooks/cc_notify.json", "hooks/cc_notify.json"),
     ("hooks/cc_notify_toast.ps1", "hooks/cc_notify_toast.ps1"),
 ]
+# 只在本机没有时创建、已有就不再比对的文件：各机器自己填的内容（比如 ntfy topic）不能被仓库版本盖掉
+CREATE_ONLY = {"hooks/cc_notify.json"}
 # 写入时加 UTF-8 BOM 的后缀：Windows PowerShell 5.1 读没有 BOM 的脚本会按系统代码页解码，中文变乱码。
 # 读取两边时都去掉 BOM 再比较，所以 BOM 不会被当成差异
 BOM_SUFFIXES = (".ps1",)
@@ -496,6 +498,8 @@ def diff_files(base, timeout, dest):
             continue
         target = dest / local_name
         local = None
+        if target.exists() and local_name in CREATE_ONLY:
+            continue
         if target.exists():
             local = target.read_bytes().decode("utf-8-sig", "replace").replace("\r\n", "\n")
             if local == text:
